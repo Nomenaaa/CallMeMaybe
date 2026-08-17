@@ -7,32 +7,35 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/17 13:55:12 by nrasolom            #+#    #+#            #
-#   Updated: 2026/08/17 14:58:27 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/08/17 15:20:10 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
 from json import load, JSONDecodeError
 from model_validations import PromptModel
 from pydantic import ValidationError
-from typing import Any
 
 
-def validate_prompt_file(input_path: str) -> Any:
+def validate_prompt_file(input_path: str) -> list[str]:
     try:
         with open(input_path, 'r') as file_obj:
             prompts = load(file_obj)
     
-        for prompt in prompts:
-            for k, v in prompt.items():
-                PromptModel(key = k, value = v)
+        valid_prompts: list[str] = []
+        for item in prompts:
+            try:
+                PromptModel.model_validate(item)
+                valid_prompts.append(item['prompt'])
+            except ValidationError as e:
+                for dict_error in e.errors():
+                    print(f"Validation Error: {dict_error.get('msg')}")
+                print("Skipping...")
+                continue
 
-        return prompts
+        return valid_prompts
 
     except OSError as e:
         print(f"Error on opening the file: {e}")
-    except ValidationError as e:
-        for dict_error in e.errors():
-            print(f"Validation Error: {dict_error.get('msg')}")
     except JSONDecodeError as e:
         print(f"Invalid JSON: {e.msg}")
 
