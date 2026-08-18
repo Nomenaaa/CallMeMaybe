@@ -7,12 +7,12 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/17 14:12:30 by nrasolom            #+#    #+#            #
-#   Updated: 2026/08/17 15:56:11 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/08/18 11:24:15 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
 from pydantic import BaseModel
-from typing import Literal
+from typing import Literal, Any
 
 
 class ParamType(BaseModel):
@@ -30,7 +30,7 @@ class FunctionDefinitionModel(BaseModel):
     returns: ParamType
 
 
-# class OutputValidator(BaseModel):
-#     prompt: str
-#     name: str
-#     parameters: dict[str, str | int]
+class OutputValidator(BaseModel):
+    prompt: str
+    name: str
+    parameters: dict[str, Any]

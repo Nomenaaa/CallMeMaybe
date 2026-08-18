@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/17 13:55:12 by nrasolom            #+#    #+#            #
-#   Updated: 2026/08/17 15:50:44 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/08/18 13:29:03 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -19,11 +19,11 @@ import os
 
 
 def validate_prompt_file(input_path: str) -> list[str]:
+    valid_prompts: list[str] = []
     try:
         with open(input_path, 'r') as file_obj:
             prompts = load(file_obj)
     
-        valid_prompts: list[str] = []
         for item in prompts:
             try:
                 PromptModel.model_validate(item)
@@ -34,20 +34,21 @@ def validate_prompt_file(input_path: str) -> list[str]:
                 print("Skipping...")
                 continue
 
-        return valid_prompts
 
     except OSError as e:
         print(f"Error on opening the file: {e}")
     except JSONDecodeError as e:
         print(f"Invalid JSON: {e.msg}")
+    finally:
+        return valid_prompts
 
 
 def validate_function_def_file(input_path: str) -> list[Any]:
+    valid_func_def: list[Any] = []
     try:
         with open(input_path, 'r') as file_obj:
             func_def = load(file_obj)
 
-        valid_func_def: list[Any] = []
         for item in func_def:
             try:
                 FunctionDefinitionModel.model_validate(item)
@@ -58,12 +59,13 @@ def validate_function_def_file(input_path: str) -> list[Any]:
                 print("Skipping...")
                 continue
 
-        return valid_func_def
 
     except OSError as e:
         print(f"Error on opening the file: {e}")
     except JSONDecodeError as e:
         print(f"Invalid JSON: {e.msg}")
+    finally:
+        return valid_func_def
 
 
 # if __name__ == "__main__":
