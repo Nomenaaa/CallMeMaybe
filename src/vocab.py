@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/18 11:26:49 by nrasolom            #+#    #+#            #
-#   Updated: 2026/08/18 13:39:50 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/08/20 10:11:08 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -35,7 +35,7 @@ def id_to_str(vocab_dict: dict[str, int]
     return id_lookup
 
 
-def group_ids(vocab_dict: dict[str, int]) -> dict[str, list[int]]:
+def first_char_to_ids(vocab_dict: dict[str, int]) -> dict[str, list[int]]:
     group: defaultdict[str, list[int]] = defaultdict(list)
 
     for vocab_str, vocab_id in vocab_dict.items():
