@@ -7,12 +7,14 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/20 10:12:39 by nrasolom            #+#    #+#            #
-#   Updated: 2026/08/20 16:00:19 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/08/21 13:58:40 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
 from abc import ABC, abstractmethod
 from typing import Any
+from vocab import get_vocab, get_first_char_to_ids
+from llm_sdk import Small_LLM_Model
 
 
 class Constraint(ABC):
@@ -21,7 +23,13 @@ class Constraint(ABC):
         pass
 
     @abstractmethod
-    def is_accepted(self, state: str) -> bool:
+    def is_accepted(self, state: Any) -> bool:
+        pass
+
+    @abstractmethod
+    def get_candidate_ids(
+        self, state: Any, first_char_to_ids: dict[str, int]
+    ) -> list[str]:
         pass
 
 
@@ -58,6 +66,15 @@ class Trie(Constraint):
             return True
         return False
 
+    def get_candidate_ids(
+            self,state: TrieNode, first_char_to_ids: dict[str, int]
+    ) -> list[int]:
+        ids: list[int] = []
+
+        for key in state._children:
+            ids += first_char_to_ids.get(key)
+        return ids
+
 
 class DFA(Constraint, ABC):
     def __init__(self, accepting_states: list[str]):
@@ -83,6 +100,12 @@ class DFA(Constraint, ABC):
             return True
         return False
 
+    @abstractmethod
+    def get_candidate_ids(
+        self, state: str, first_char_to_ids: dict[str, int]
+    ) -> list[int]:
+        pass
+
 
 class StringDFA(DFA):
     def transitions(self, state: str, char: str) -> None | str:
@@ -97,6 +120,16 @@ class StringDFA(DFA):
                return "IN_STRING"
         if state == "ESCAPE":
             return "IN_STRING" if char in "\\'\"nrtbfva" else None
+
+    def get_candidate_ids(
+            self, state: str, first_char_to_ids: dict[str, int]
+    ) -> list[int]:
+        if state == "START":
+            return first_char_to_ids.get('"')
+        if state == "ESCAPE":
+            return first_char_to_ids.get("\\")
+        if state == "IN_STRING":
+            return []
 
 
 class NumberDFA(DFA):
@@ -122,16 +155,22 @@ class NumberDFA(DFA):
         if state == "IN_FRACTION":
             return "IN_FRACTION" if char.isdigit() else None
 
+    def get_candidate_ids(
+            self, state: str, first_char_to_ids: dict[str, int]
+    ) -> list[int]:
+        pass
+
 
 # if __name__ == "__main__":
+#     groups_ids = get_first_char_to_ids(get_vocab(Small_LLM_Model()))
 #     trie = Trie()
 #     options = ["fn_add_numbers", "fn_greet", "fn_reverse_string"]
 #     for opt in options:
 #         trie.insert(opt)
-#     test = trie.simulate_from(trie._root, "fn_")
-#     test_2 = trie.simulate_from(test, "d")
+#     test = trie.simulate_from(trie._root, "fn_add")
 #     print(f"{test._EndOfWord}   {test._children}")
-#     print(f"{test_2._EndOfWord} {test_2._children}")
+#     print(trie.get_candidate_ids(test, groups_ids))
+
 
 #     str_dfa = StringDFA(["END"])
 #     test = str_dfa.simulate_from(str_dfa._start, '"\l')
