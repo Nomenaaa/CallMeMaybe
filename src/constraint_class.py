@@ -7,14 +7,14 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/20 10:12:39 by nrasolom            #+#    #+#            #
-#   Updated: 2026/08/21 13:58:40 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/08/22 12:06:54 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
 from abc import ABC, abstractmethod
 from typing import Any
-from vocab import get_vocab, get_first_char_to_ids
-from llm_sdk import Small_LLM_Model
+# from vocab import get_vocab, get_first_char_to_ids
+# from llm_sdk import Small_LLM_Model
 
 
 class Constraint(ABC):
@@ -67,7 +67,7 @@ class Trie(Constraint):
         return False
 
     def get_candidate_ids(
-            self,state: TrieNode, first_char_to_ids: dict[str, int]
+            self, state: TrieNode, first_char_to_ids: dict[str, int]
     ) -> list[int]:
         ids: list[int] = []
 
@@ -117,7 +117,7 @@ class StringDFA(DFA):
             elif char == '"':
                 return "END"
             else:
-               return "IN_STRING"
+                return "IN_STRING"
         if state == "ESCAPE":
             return "IN_STRING" if char in "\\'\"nrtbfva" else None
 
@@ -158,7 +158,15 @@ class NumberDFA(DFA):
     def get_candidate_ids(
             self, state: str, first_char_to_ids: dict[str, int]
     ) -> list[int]:
-        pass
+        number = "0123456789"
+        ids = []
+        for n in number:
+            ids += first_char_to_ids.get(n)
+        if state == "START":
+            ids += [10, 12]
+        if state == "IN_NUMBER":
+            ids += [13]
+        return ids
 
 
 # if __name__ == "__main__":
