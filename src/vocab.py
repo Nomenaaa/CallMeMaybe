@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/18 11:26:49 by nrasolom            #+#    #+#            #
-#   Updated: 2026/08/24 21:56:03 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/08/24 22:10:29 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -25,13 +25,13 @@ def get_vocab(model: Small_LLM_Model) -> dict[str, int]:
     return vocab_dict
 
 
-def get_id_to_str(vocab_dict: dict[str, int]
+def get_id_to_str(vocab_dict: dict[str, int], model: Small_LLM_Model
                   ) -> np.ndarray[tuple[int], np.dtype[np.object_]]:
     size = len(vocab_dict)
     id_lookup = np.empty(size, dtype=object)
 
-    for vocab_str, vocab_id in vocab_dict.items():
-        id_lookup[vocab_id] = vocab_str
+    for _, vocab_id in vocab_dict.items():
+        id_lookup[vocab_id] = model.decode(vocab_id)
 
     return id_lookup
 
