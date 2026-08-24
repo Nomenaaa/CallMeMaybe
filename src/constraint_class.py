@@ -7,13 +7,13 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/20 10:12:39 by nrasolom            #+#    #+#            #
-#   Updated: 2026/08/22 12:06:54 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/08/24 22:04:53 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
 from abc import ABC, abstractmethod
 from typing import Any
-# from vocab import get_vocab, get_first_char_to_ids
+from vocab import collect_ids_from_chars
 # from llm_sdk import Small_LLM_Model
 
 
@@ -28,8 +28,8 @@ class Constraint(ABC):
 
     @abstractmethod
     def get_candidate_ids(
-        self, state: Any, first_char_to_ids: dict[str, int]
-    ) -> list[str]:
+        self, state: Any, first_char_to_ids: dict[str, list[int]]
+    ) -> list[int]:
         pass
 
 
@@ -67,12 +67,12 @@ class Trie(Constraint):
         return False
 
     def get_candidate_ids(
-            self, state: TrieNode, first_char_to_ids: dict[str, int]
+            self, state: TrieNode, first_char_to_ids: dict[str, list[int]]
     ) -> list[int]:
         ids: list[int] = []
 
         for key in state._children:
-            ids += first_char_to_ids.get(key)
+            ids.extend(first_char_to_ids.get(key, []))
         return ids
 
 
@@ -102,7 +102,7 @@ class DFA(Constraint, ABC):
 
     @abstractmethod
     def get_candidate_ids(
-        self, state: str, first_char_to_ids: dict[str, int]
+        self, state: str, first_char_to_ids: dict[str, list[int]]
     ) -> list[int]:
         pass
 
@@ -122,14 +122,20 @@ class StringDFA(DFA):
             return "IN_STRING" if char in "\\'\"nrtbfva" else None
 
     def get_candidate_ids(
-            self, state: str, first_char_to_ids: dict[str, int]
+            self, state: str, first_char_to_ids: dict[str, list[int]]
     ) -> list[int]:
         if state == "START":
-            return first_char_to_ids.get('"')
+            return first_char_to_ids.get('"', [])
         if state == "ESCAPE":
-            return first_char_to_ids.get("\\")
+            return collect_ids_from_chars("\\'\"nrtbfva", first_char_to_ids)
         if state == "IN_STRING":
-            return []
+            ids = []
+            for ch, ch_ids in first_char_to_ids.items():
+                if (not ch == '\\' and not ch == '"'):
+                    ids.extend(ch_ids)
+            ids.extend([1, 14])
+            return ids
+        return []
 
 
 class NumberDFA(DFA):
@@ -149,24 +155,25 @@ class NumberDFA(DFA):
             elif char.isdigit():
                 return "IN_NUMBER"
             else:
-                None
+                return None
         if state == "DOT":
             return "IN_FRACTION" if char.isdigit() else None
         if state == "IN_FRACTION":
             return "IN_FRACTION" if char.isdigit() else None
 
     def get_candidate_ids(
-            self, state: str, first_char_to_ids: dict[str, int]
+            self, state: str, first_char_to_ids: dict[str, list[int]]
     ) -> list[int]:
-        number = "0123456789"
-        ids = []
-        for n in number:
-            ids += first_char_to_ids.get(n)
+        number = collect_ids_from_chars("0123456789", first_char_to_ids)
         if state == "START":
-            ids += [10, 12]
+            number.extend([10, 12])
+            return number
         if state == "IN_NUMBER":
-            ids += [13]
-        return ids
+            number.extend([13])
+            return number
+        if state in ["SIGN", "DOT", "IN_FRACTION"]:
+            return number
+        return []
 
 
 # if __name__ == "__main__":
