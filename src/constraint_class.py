@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/20 10:12:39 by nrasolom            #+#    #+#            #
-#   Updated: 2026/08/24 22:04:53 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/08/24 23:09:02 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -18,6 +18,9 @@ from vocab import collect_ids_from_chars
 
 
 class Constraint(ABC):
+    def __init__(self):
+        self._cache: dict[Any, dict[int, Any]] = {}
+
     @abstractmethod
     def simulate_from(self, state: Any, word: str) -> Any:
         pass
@@ -32,6 +35,10 @@ class Constraint(ABC):
     ) -> list[int]:
         pass
 
+    @abstractmethod
+    def get_start_state(self) -> Any:
+        pass
+
 
 class TrieNode:
     def __init__(self):
@@ -41,6 +48,7 @@ class TrieNode:
 
 class Trie(Constraint):
     def __init__(self):
+        super().__init__()
         self._root = TrieNode()
 
     def insert(self, option: str) -> None:
@@ -75,10 +83,14 @@ class Trie(Constraint):
             ids.extend(first_char_to_ids.get(key, []))
         return ids
 
+    def get_start_state(self) -> Any:
+        return self._root
+
 
 class DFA(Constraint, ABC):
     def __init__(self, accepting_states: list[str]):
-        self._start = "START"
+        super().__init__()
+        self._root = "START"
         self._accepted = accepting_states
 
     @abstractmethod
@@ -105,6 +117,9 @@ class DFA(Constraint, ABC):
         self, state: str, first_char_to_ids: dict[str, list[int]]
     ) -> list[int]:
         pass
+
+    def get_start_state(self) -> Any:
+        return self._start
 
 
 class StringDFA(DFA):

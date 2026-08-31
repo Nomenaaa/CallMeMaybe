@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/17 13:55:12 by nrasolom            #+#    #+#            #
-#   Updated: 2026/08/18 13:29:03 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/08/29 06:37:32 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -15,7 +15,6 @@ from json import load, JSONDecodeError
 from model_validations import PromptModel, FunctionDefinitionModel
 from pydantic import ValidationError
 from typing import Any
-import os
 
 
 def validate_prompt_file(input_path: str) -> list[str]:
@@ -23,7 +22,7 @@ def validate_prompt_file(input_path: str) -> list[str]:
     try:
         with open(input_path, 'r') as file_obj:
             prompts = load(file_obj)
-    
+
         for item in prompts:
             try:
                 PromptModel.model_validate(item)
@@ -33,7 +32,6 @@ def validate_prompt_file(input_path: str) -> list[str]:
                     print(f"Validation Error: {dict_error.get('msg')}")
                 print("Skipping...")
                 continue
-
 
     except OSError as e:
         print(f"Error on opening the file: {e}")
@@ -58,7 +56,6 @@ def validate_function_def_file(input_path: str) -> list[Any]:
                     print(f"Validation Error: {dict_error.get('msg')}")
                 print("Skipping...")
                 continue
-
 
     except OSError as e:
         print(f"Error on opening the file: {e}")
