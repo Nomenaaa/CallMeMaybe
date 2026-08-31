@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/17 14:12:30 by nrasolom            #+#    #+#            #
-#   Updated: 2026/08/18 11:24:15 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/08/31 14:26:22 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -16,11 +16,11 @@ from typing import Literal, Any
 
 
 class ParamType(BaseModel):
-    type: Literal["number", "integer", "string", "boolean", "none", "array"]
+    type: Literal["number", "string"]
 
 
 class PromptModel(BaseModel):
-    prompt : str
+    prompt: str
 
 
 class FunctionDefinitionModel(BaseModel):

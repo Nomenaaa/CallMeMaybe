@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/21 09:56:49 by nrasolom            #+#    #+#            #
-#   Updated: 2026/08/29 06:36:01 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/08/31 14:40:19 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -67,60 +67,110 @@ def constraint_decoder(constraint: Constraint, prompt: str) -> str:
     return model.decode(generated_ids)
 
 
-def generate_function_name(prompt: str, options: list[str]) -> str:
+def generate_function_name(prompt: str, options: dict[str, str]) -> str:
     trie = Trie()
-    for option in options:
+    for option in list(options.keys()):
         trie.insert(option)
+    trie.insert("None")
 
-    return constraint_decoder(trie, prompt)
+    function_catalog: str = "\n".join(
+        [f"- {name}: {desc}" for name, desc in options.items()]
+    )
+    llm_prompt = (
+        f"<|im_start|>system\n/no_think\n"
+        "You are a strict router. Choose exactly ONE option from this list: "
+        f"{list(options.keys())}. Use the descriptions bellow to help choose "
+        f"the correct name: {function_catalog}."
+        "If no option matches correctly, you MUST return 'None'."
+        "\n<|im_end|>\n"
+        f"<|im_start|>user\nQuery to match: {prompt}\n<|im_end|>\n"
+        "<|im_start|>assistant\n"
+    )
+
+    return constraint_decoder(trie, llm_prompt)
 
 
-def generate_string(prompt: str) -> str:
+def generate_string(
+        function_name: str,
+        prompt: str,
+        param_outputs: dict[str, Any]) -> str:
     string_dfa = StringDFA(["END"])
+    param_generated: list[Any] = list(param_outputs.values())
+    llm_prompt = (
+        "<|im_start|>system\n/no_think\n"
+        f"You are a strict data extractor for the function '{function_name}'. "
+        "Extract exactly ONE parameter value from the user query. "
+        "Do NOT select any parameter that is already present in this list: "
+        f"{param_generated}. Output ONLY the extracted text wrapped in double "
+        "quotes, for example: \"value\".\n"
+        "<|im_end|>\n"
+        f"<|im_start|>user\nQuery to match: {prompt}\n<|im_end|>\n"
+        "<|im_start|>assistant\n"
+    )
 
-    return constraint_decoder(string_dfa, prompt)
+    return constraint_decoder(string_dfa, llm_prompt)
 
 
-def generate_number(prompt: str) -> str:
-    number_dfa = NumberDFA(["END"])
+def generate_number(
+        function_name: str,
+        prompt: str,
+        param_outputs: dict[str, Any]
+     ) -> str:
+    number_dfa = NumberDFA(["IN_FRACTION"])
+    param_generated: list[Any] = list(param_outputs.values())
+    llm_prompt = (
+        "<|im_start|>system\n/no_think\n"
+        f"You are a strict data extractor for the function '{function_name}'. "
+        "Extract exactly ONE numerical value from the query and format it "
+        "strictly as a float number with a decimal point (e.g., 5 becomes 5.0,"
+        " 3.14 remains 3.14). Do NOT select any parameter that is present "
+        f"in this list: {param_generated}. Output ONLY the raw float number.\n"
+        "<|im_end|>\n"
+        f"<|im_start|>user\nQuery to match: {prompt}\n<|im_end|>\n"
+        "<|im_start|>assistant\n"
+    )
 
-    return constraint_decoder(number_dfa, prompt)
+    return constraint_decoder(number_dfa, llm_prompt)
 
 
 def generate_parameters(
-        function_name: str, parameters: dict[str, Any]
+        function_name: str, parameters: dict[str, Any], prompt: str
 ) -> dict[str, Any]:
-    prompt = ""
-    paramaters_gen: dict[str, Any] = {}
+
+    param_outputs: dict[str, Any] = {}
 
     for key, value in parameters.items():
-        if value == "string":
-            paramaters_gen[key] = generate_string(prompt)
-        if value == "number" or value == "integer":
-            paramaters_gen[key] = generate_number(prompt)
+        if value["type"] == "string":
+            param_outputs[key] = generate_string(function_name,
+                                                 prompt,
+                                                 param_outputs)
+        if value["type"] == "number":
+            param_outputs[key] = generate_number(function_name,
+                                                 prompt,
+                                                 param_outputs)
 
-    return paramaters_gen
+    return param_outputs
 
 
 def generate_function(
         prompt: str, valid_func_def: list[Any]
 ) -> dict[str, Any]:
-    function: dict[str, Any] = {}
-    options: list[str] = []
+    function_output: dict[str, Any] = {}
+    options: dict[str, str] = []
 
     for func_def in valid_func_def:
-        options.append(func_def.get("name", ""))
+        options[func_def.get("name")] = func_def["description"]
 
-    prompt_gen = ""
-    function_name = generate_function_name(prompt_gen, options)
-    function["name"] = function_name
+    function_name = generate_function_name(prompt, options)
+    function_output["name"] = function_name
 
     parameters_model: dict[str, Any] = {}
     for func_def in valid_func_def:
         if func_def.get("name") == function_name:
             parameters_model = func_def.get("parameters")
 
-    function["parameters"] = generate_parameters(function_name,
-                                                 parameters_model)
+    function_output["parameters"] = generate_parameters(function_name,
+                                                        parameters_model,
+                                                        prompt)
 
-    return function
+    return function_output
