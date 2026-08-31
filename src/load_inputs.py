@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/17 13:55:12 by nrasolom            #+#    #+#            #
-#   Updated: 2026/08/29 06:37:32 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/08/31 14:56:30 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -37,8 +37,8 @@ def validate_prompt_file(input_path: str) -> list[str]:
         print(f"Error on opening the file: {e}")
     except JSONDecodeError as e:
         print(f"Invalid JSON: {e.msg}")
-    finally:
-        return valid_prompts
+
+    return valid_prompts
 
 
 def validate_function_def_file(input_path: str) -> list[Any]:
@@ -61,8 +61,8 @@ def validate_function_def_file(input_path: str) -> list[Any]:
         print(f"Error on opening the file: {e}")
     except JSONDecodeError as e:
         print(f"Invalid JSON: {e.msg}")
-    finally:
-        return valid_func_def
+
+    return valid_func_def
 
 
 # if __name__ == "__main__":

@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/20 10:12:39 by nrasolom            #+#    #+#            #
-#   Updated: 2026/08/24 23:09:02 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/08/31 14:49:51 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -90,7 +90,7 @@ class Trie(Constraint):
 class DFA(Constraint, ABC):
     def __init__(self, accepting_states: list[str]):
         super().__init__()
-        self._root = "START"
+        self._start = "START"
         self._accepted = accepting_states
 
     @abstractmethod

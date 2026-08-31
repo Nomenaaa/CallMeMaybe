@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/21 09:56:49 by nrasolom            #+#    #+#            #
-#   Updated: 2026/08/31 14:40:19 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/08/31 14:49:02 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -156,7 +156,7 @@ def generate_function(
         prompt: str, valid_func_def: list[Any]
 ) -> dict[str, Any]:
     function_output: dict[str, Any] = {}
-    options: dict[str, str] = []
+    options: dict[str, str] = {}
 
     for func_def in valid_func_def:
         options[func_def.get("name")] = func_def["description"]
