@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/21 09:56:49 by nrasolom            #+#    #+#            #
-#   Updated: 2026/08/31 14:49:02 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/01 15:56:59 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -16,7 +16,8 @@ from typing import Any
 from llm_sdk import Small_LLM_Model
 from vocab import get_vocab, get_first_char_to_ids, get_id_to_str
 import numpy as np
-
+from load_inputs import validate_function_def_file
+import os, time
 
 def get_valid_tokens(
         constraint: Constraint, state: Any,
@@ -37,15 +38,18 @@ def get_valid_tokens(
     return valid_tokens
 
 
-def constraint_decoder(constraint: Constraint, prompt: str) -> str:
-    state = constraint.get_start_state()
-    model = Small_LLM_Model()
-    vocab_dict = get_vocab(model)
-    first_char_to_ids = get_first_char_to_ids(vocab_dict)
-    id_to_str = get_id_to_str(vocab_dict, model)
-    input_ids: list = model.encode(prompt).tolist()[0]
+def constraint_decoder(
+        constraint: Constraint,
+        prompt_ids: list[int],
+        model: Small_LLM_Model
+    ) -> list[int]:
 
-    generated_ids = []
+    state: Any = constraint.get_start_state()
+    vocab_dict: dict[str, int] = get_vocab(model)
+    first_char_to_ids: dict[str, list[int]] = get_first_char_to_ids(vocab_dict)
+    id_to_str = get_id_to_str(vocab_dict, model)
+
+    generated_ids: list[int] = []
     while not constraint.is_accepted(state):
         if state in constraint._cache:
             valid_tokens = constraint._cache[state]
@@ -54,123 +58,97 @@ def constraint_decoder(constraint: Constraint, prompt: str) -> str:
                 constraint, state, first_char_to_ids, id_to_str)
             constraint._cache[state] = valid_tokens
 
-        logits = model.get_logits_from_input_ids(input_ids)
+        logits = model.get_logits_from_input_ids(prompt_ids)
         for token_id in range(len(logits)):
             if token_id not in valid_tokens:
                 logits[token_id] = float("-inf")
 
         next_token = logits.index(max(logits))
-        input_ids.append(next_token)
+        prompt_ids.append(next_token)
         generated_ids.append(next_token)
         state = valid_tokens[next_token]
 
-    return model.decode(generated_ids)
+    return generated_ids
 
 
-def generate_function_name(prompt: str, options: dict[str, str]) -> str:
+def generate_function_name(
+        prompt_ids: list[int],
+        options: dict[str, str],
+        model: Small_LLM_Model
+    ) -> list[int]:
     trie = Trie()
     for option in list(options.keys()):
         trie.insert(option)
     trie.insert("None")
 
-    function_catalog: str = "\n".join(
-        [f"- {name}: {desc}" for name, desc in options.items()]
-    )
-    llm_prompt = (
-        f"<|im_start|>system\n/no_think\n"
-        "You are a strict router. Choose exactly ONE option from this list: "
-        f"{list(options.keys())}. Use the descriptions bellow to help choose "
-        f"the correct name: {function_catalog}."
-        "If no option matches correctly, you MUST return 'None'."
-        "\n<|im_end|>\n"
-        f"<|im_start|>user\nQuery to match: {prompt}\n<|im_end|>\n"
-        "<|im_start|>assistant\n"
-    )
-
-    return constraint_decoder(trie, llm_prompt)
+    return constraint_decoder(trie, prompt_ids, model)
 
 
-def generate_string(
-        function_name: str,
-        prompt: str,
-        param_outputs: dict[str, Any]) -> str:
-    string_dfa = StringDFA(["END"])
-    param_generated: list[Any] = list(param_outputs.values())
-    llm_prompt = (
-        "<|im_start|>system\n/no_think\n"
-        f"You are a strict data extractor for the function '{function_name}'. "
-        "Extract exactly ONE parameter value from the user query. "
-        "Do NOT select any parameter that is already present in this list: "
-        f"{param_generated}. Output ONLY the extracted text wrapped in double "
-        "quotes, for example: \"value\".\n"
-        "<|im_end|>\n"
-        f"<|im_start|>user\nQuery to match: {prompt}\n<|im_end|>\n"
-        "<|im_start|>assistant\n"
-    )
+# def generate_string(
+#         prompt_ids: list[int],
+#         model: Small_LLM_Model
+#     ) -> list[int]:
+#     string_dfa = StringDFA(["END"])
 
-    return constraint_decoder(string_dfa, llm_prompt)
+#     return constraint_decoder(string_dfa, prompt_ids, model)
 
 
-def generate_number(
-        function_name: str,
-        prompt: str,
-        param_outputs: dict[str, Any]
-     ) -> str:
-    number_dfa = NumberDFA(["IN_FRACTION"])
-    param_generated: list[Any] = list(param_outputs.values())
-    llm_prompt = (
-        "<|im_start|>system\n/no_think\n"
-        f"You are a strict data extractor for the function '{function_name}'. "
-        "Extract exactly ONE numerical value from the query and format it "
-        "strictly as a float number with a decimal point (e.g., 5 becomes 5.0,"
-        " 3.14 remains 3.14). Do NOT select any parameter that is present "
-        f"in this list: {param_generated}. Output ONLY the raw float number.\n"
-        "<|im_end|>\n"
-        f"<|im_start|>user\nQuery to match: {prompt}\n<|im_end|>\n"
-        "<|im_start|>assistant\n"
-    )
+# def generate_number(
+#         prompt_ids: list[int],
+#         model: Small_LLM_Model) -> str:
+#     number_dfa = NumberDFA(["IN_FRACTION"])
 
-    return constraint_decoder(number_dfa, llm_prompt)
+#     return constraint_decoder(number_dfa, prompt_ids, model)
 
 
-def generate_parameters(
-        function_name: str, parameters: dict[str, Any], prompt: str
-) -> dict[str, Any]:
+# def generate_parameters(
+#         parameters: dict[str, Any], prompt_ids: str
+#     ) -> str:
 
-    param_outputs: dict[str, Any] = {}
-
-    for key, value in parameters.items():
-        if value["type"] == "string":
-            param_outputs[key] = generate_string(function_name,
-                                                 prompt,
-                                                 param_outputs)
-        if value["type"] == "number":
-            param_outputs[key] = generate_number(function_name,
-                                                 prompt,
-                                                 param_outputs)
-
-    return param_outputs
+#     return ""
 
 
 def generate_function(
         prompt: str, valid_func_def: list[Any]
-) -> dict[str, Any]:
-    function_output: dict[str, Any] = {}
+    ) -> str:
+
     options: dict[str, str] = {}
-
     for func_def in valid_func_def:
-        options[func_def.get("name")] = func_def["description"]
+        options[func_def.get("name")] = func_def.get("description")
 
-    function_name = generate_function_name(prompt, options)
-    function_output["name"] = function_name
+    function_catalog: str = "\n".join(
+            [f"- {name}: {desc}"
+             for name, desc in options.items()]
+    )
+    ex_output = '{"name": "fn_add_numbers","parameters": {"a": 2.0, "b": 3.5}}'
+    llm_prompt = (
+        "Select the appropriate function from the available functions "
+        "and extract its arguments from the user's query."
+        f"Avalaible functions: {function_catalog}"
+        "Example: "
+        "User query: What is the sum of 2 and 3?"
+        f"Output: {ex_output}"
+        f"User query: {prompt}"
+        "Output: "
+    )
 
-    parameters_model: dict[str, Any] = {}
-    for func_def in valid_func_def:
-        if func_def.get("name") == function_name:
-            parameters_model = func_def.get("parameters")
+    model: Small_LLM_Model = Small_LLM_Model()
+    prompt_ids: list[int] = model.encode(llm_prompt).tolist()[0]
 
-    function_output["parameters"] = generate_parameters(function_name,
-                                                        parameters_model,
-                                                        prompt)
+    gen_output: str = '{"name": '
+    gen_ids: list[int] = model.encode(gen_output).tolist()[0]
+    prompt_ids.append(gen_ids)
 
-    return function_output
+    gen_ids += generate_function_name(prompt_ids, options, model)
+    gen_output: str = model.decode(gen_ids)
+
+    return gen_output
+
+
+if __name__ == "__main__":
+    start = time.perf_counter()
+    valid_func_def = validate_function_def_file(os.getcwd() + "/data/input/functions_definition.json")
+    prompt = "Replace all numbers in \"Hello 34 I'm 233 years old\" with NUMBERS"
+    print(generate_function(prompt, valid_func_def))
+    end = time.perf_counter()
+    print(f"Execution time: {end - start}")
