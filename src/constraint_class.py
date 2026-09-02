@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/20 10:12:39 by nrasolom            #+#    #+#            #
-#   Updated: 2026/08/31 14:49:51 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/02 14:51:30 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -90,7 +90,7 @@ class Trie(Constraint):
 class DFA(Constraint, ABC):
     def __init__(self, accepting_states: list[str]):
         super().__init__()
-        self._start = "START"
+        # self._start = "START"
         self._accepted = accepting_states
 
     @abstractmethod
@@ -118,6 +118,7 @@ class DFA(Constraint, ABC):
     ) -> list[int]:
         pass
 
+    @abstractmethod
     def get_start_state(self) -> Any:
         return self._start
 
@@ -135,6 +136,7 @@ class StringDFA(DFA):
                 return "IN_STRING"
         if state == "ESCAPE":
             return "IN_STRING" if char in "\\'\"nrtbfva" else None
+        return None
 
     def get_candidate_ids(
             self, state: str, first_char_to_ids: dict[str, list[int]]
@@ -151,6 +153,9 @@ class StringDFA(DFA):
             ids.extend([1, 14])
             return ids
         return []
+
+    def get_start_state(self):
+        return "IN_STRING"
 
 
 class NumberDFA(DFA):
@@ -189,6 +194,9 @@ class NumberDFA(DFA):
         if state in ["SIGN", "DOT", "IN_FRACTION"]:
             return number
         return []
+
+    def get_start_state(self):
+        return "START"
 
 
 # if __name__ == "__main__":

@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/21 09:56:49 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/01 15:56:59 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/02 15:55:06 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -16,8 +16,7 @@ from typing import Any
 from llm_sdk import Small_LLM_Model
 from vocab import get_vocab, get_first_char_to_ids, get_id_to_str
 import numpy as np
-from load_inputs import validate_function_def_file
-import os, time
+
 
 def get_valid_tokens(
         constraint: Constraint, state: Any,
@@ -75,37 +74,59 @@ def generate_function_name(
         prompt_ids: list[int],
         options: dict[str, str],
         model: Small_LLM_Model
-    ) -> list[int]:
+    ) -> list[list[int], list[int]]:
     trie = Trie()
     for option in list(options.keys()):
         trie.insert(option)
-    trie.insert("None")
 
-    return constraint_decoder(trie, prompt_ids, model)
+    name_ids: list[list[int], list[int]] = []
+    gen_ids: list[int] = model.encode('{"name": "').tolist()[0]
+    prompt_ids.extend(gen_ids)
 
+    func_name_ids = constraint_decoder(trie, prompt_ids, model)
+    name_ids.append(func_name_ids)
+    gen_ids.extend(func_name_ids)
+    name_ids.append(gen_ids)
 
-# def generate_string(
-#         prompt_ids: list[int],
-#         model: Small_LLM_Model
-#     ) -> list[int]:
-#     string_dfa = StringDFA(["END"])
-
-#     return constraint_decoder(string_dfa, prompt_ids, model)
-
-
-# def generate_number(
-#         prompt_ids: list[int],
-#         model: Small_LLM_Model) -> str:
-#     number_dfa = NumberDFA(["IN_FRACTION"])
-
-#     return constraint_decoder(number_dfa, prompt_ids, model)
+    return name_ids
 
 
-# def generate_parameters(
-#         parameters: dict[str, Any], prompt_ids: str
-#     ) -> str:
+def generate_parameters(
+        parameters: dict[str, Any],
+        prompt_ids: str,
+        model: Small_LLM_Model
+    ) -> list[int]:
 
-#     return ""
+    number_dfa = NumberDFA(["IN_FRACTION"])
+    string_dfa = StringDFA(["END"])
+
+    gen_ids : list[int] = model.encode('", "parameters": {').tolist()[0]
+    prompt_ids.extend(gen_ids)
+    for i, (key, value) in enumerate(parameters.items()):
+        key_ids = model.encode(f'"{key}":').tolist()[0]
+        gen_ids.extend(key_ids)
+        prompt_ids.extend(key_ids)
+
+        if value["type"] == "string":
+            quote_ids = model.encode('"').tolist()[0]
+            gen_ids.extend(quote_ids)
+            prompt_ids.extend(quote_ids)
+            value_ids = constraint_decoder(string_dfa, prompt_ids, model)
+            gen_ids.extend(value_ids)
+            prompt_ids.extend(value_ids)
+
+        if value["type"] == "number":
+            value_ids = constraint_decoder(number_dfa, prompt_ids, model)
+            gen_ids.extend(value_ids)
+            prompt_ids.extend(value_ids)
+
+        if i < len(parameters) - 1:
+            sep_ids = model.encode(', ').tolist()[0]
+            gen_ids.extend(sep_ids)
+            prompt_ids.extend(sep_ids)
+
+    gen_ids.extend(model.encode('}}').tolist()[0])
+    return gen_ids
 
 
 def generate_function(
@@ -120,35 +141,56 @@ def generate_function(
             [f"- {name}: {desc}"
              for name, desc in options.items()]
     )
-    ex_output = '{"name": "fn_add_numbers","parameters": {"a": 2.0, "b": 3.5}}'
+    # ex_output = '{"name": "fn_add_numbers", "parameters": {"a": 2.0, "b": 3.0}}'
+    # llm_prompt = (
+    #     "You are a function-calling assistant. Given the user request below, "
+    #     "determine which function should be called and what argument values to use. "
+    #     "Use ONLY information explicitly stated in the request — do not infer or guess "
+    #     "missing values.\n\n"
+    #     f"Available functions:\n{function_catalog}\n\n"
+    #     f"User request: {prompt}\n"
+    # )
+    # llm_prompt = (
+    #     "/no_think\n"
+    #     "You are a precise function selection assistant.\n"
+    #     "Choose exactly one tool from the list below to fulfill"
+    #     "the user request.\n"
+    #     "Respond or complete ONLY with a VALID raw JSON string.\n"
+    #     "NO identations of any type.\n\n"
+    #     f"Available functions: {function_catalog}"
+    #     f"User Prompt: {prompt}"
+    #     "Response:"
+    # )
     llm_prompt = (
         "Select the appropriate function from the available functions "
-        "and extract its arguments from the user's query."
-        f"Avalaible functions: {function_catalog}"
-        "Example: "
-        "User query: What is the sum of 2 and 3?"
-        f"Output: {ex_output}"
-        f"User query: {prompt}"
-        "Output: "
+        "and extract its arguments from the user's request.\n"
+        f"Available functions: {function_catalog}\n"
+        f"User request: {prompt}"
+        "Output:"
     )
 
     model: Small_LLM_Model = Small_LLM_Model()
     prompt_ids: list[int] = model.encode(llm_prompt).tolist()[0]
 
-    gen_output: str = '{"name": '
-    gen_ids: list[int] = model.encode(gen_output).tolist()[0]
-    prompt_ids.append(gen_ids)
+    name_ids : list[int] = generate_function_name(prompt_ids, options, model)
+    function_name: str = model.decode(name_ids[0])
+    prompt_ids.extend(name_ids[1])
 
-    gen_ids += generate_function_name(prompt_ids, options, model)
-    gen_output: str = model.decode(gen_ids)
+    parameters:  dict[str, Any] = {}
+    for func_def in valid_func_def:
+        if func_def.get("name") == function_name:
+            parameters = func_def.get("parameters")
 
-    return gen_output
+    param_ids: list[int] = generate_parameters(parameters, prompt_ids, model)
+    output_ids = name_ids[1] + param_ids
+
+    return model.decode(output_ids)
 
 
-if __name__ == "__main__":
-    start = time.perf_counter()
-    valid_func_def = validate_function_def_file(os.getcwd() + "/data/input/functions_definition.json")
-    prompt = "Replace all numbers in \"Hello 34 I'm 233 years old\" with NUMBERS"
-    print(generate_function(prompt, valid_func_def))
-    end = time.perf_counter()
-    print(f"Execution time: {end - start}")
+# if __name__ == "__main__":
+#     start = time.perf_counter()
+#     valid_func_def = validate_function_def_file(os.getcwd() + "/data/input/functions_definition.json")
+#     prompt = "Substitute the word 'cat' with 'dog' in 'The cat sat on the mat with another cat'"
+#     print(generate_function(prompt, valid_func_def))
+#     end = time.perf_counter()
+#     print(f"Execution time: {end - start}")

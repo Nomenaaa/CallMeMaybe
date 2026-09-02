@@ -1,0 +1,24 @@
+[project]
+name = "CallMeMaybe"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "flake8>=7.3.0",
+    "llm-sdk",
+    "mypy>=2.3.1",
+    "pydantic>=2.13.5",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+bird-feeder = { workspace = true }
+llm-sdk = { workspace = true }
+
+[tool.uv.workspace]
+members = ["llm_sdk"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["CallMeMaybe"]
