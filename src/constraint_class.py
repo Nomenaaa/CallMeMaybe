@@ -7,18 +7,17 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/20 10:12:39 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/02 14:51:30 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/04 15:20:22 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
 from abc import ABC, abstractmethod
 from typing import Any
 from vocab import collect_ids_from_chars
-# from llm_sdk import Small_LLM_Model
 
 
 class Constraint(ABC):
-    def __init__(self):
+    def __init__(self) -> None:
         self._cache: dict[Any, dict[int, Any]] = {}
 
     @abstractmethod
@@ -41,13 +40,13 @@ class Constraint(ABC):
 
 
 class TrieNode:
-    def __init__(self):
+    def __init__(self) -> None:
         self._children: dict[str, TrieNode] = {}
         self._EndOfWord = False
 
 
 class Trie(Constraint):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._root = TrieNode()
 
@@ -90,11 +89,10 @@ class Trie(Constraint):
 class DFA(Constraint, ABC):
     def __init__(self, accepting_states: list[str]):
         super().__init__()
-        # self._start = "START"
         self._accepted = accepting_states
 
     @abstractmethod
-    def transitions(state: str, char: str) -> None | str:
+    def transitions(self, state: str, char: str) -> None | str:
         pass
 
     def simulate_from(self, state: str, word: str) -> None | str:
@@ -120,7 +118,7 @@ class DFA(Constraint, ABC):
 
     @abstractmethod
     def get_start_state(self) -> Any:
-        return self._start
+        pass
 
 
 class StringDFA(DFA):
@@ -154,7 +152,7 @@ class StringDFA(DFA):
             return ids
         return []
 
-    def get_start_state(self):
+    def get_start_state(self) -> str:
         return "IN_STRING"
 
 
@@ -180,6 +178,7 @@ class NumberDFA(DFA):
             return "IN_FRACTION" if char.isdigit() else None
         if state == "IN_FRACTION":
             return "IN_FRACTION" if char.isdigit() else None
+        return None
 
     def get_candidate_ids(
             self, state: str, first_char_to_ids: dict[str, list[int]]
@@ -195,26 +194,5 @@ class NumberDFA(DFA):
             return number
         return []
 
-    def get_start_state(self):
+    def get_start_state(self) -> str:
         return "START"
-
-
-# if __name__ == "__main__":
-#     groups_ids = get_first_char_to_ids(get_vocab(Small_LLM_Model()))
-#     trie = Trie()
-#     options = ["fn_add_numbers", "fn_greet", "fn_reverse_string"]
-#     for opt in options:
-#         trie.insert(opt)
-#     test = trie.simulate_from(trie._root, "fn_add")
-#     print(f"{test._EndOfWord}   {test._children}")
-#     print(trie.get_candidate_ids(test, groups_ids))
-
-
-#     str_dfa = StringDFA(["END"])
-#     test = str_dfa.simulate_from(str_dfa._start, '"\l')
-#     print(test)
-
-#     num_dfa = NumberDFA(["IN_FRACTION"])
-#     test = num_dfa.simulate_from(num_dfa._start, "42")
-#     print(test)
-#     print(num_dfa.is_accepted(test))

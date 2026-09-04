@@ -7,12 +7,13 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/17 13:55:12 by nrasolom            #+#    #+#            #
-#   Updated: 2026/08/31 14:56:30 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/03 10:58:59 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
 from json import load, JSONDecodeError
-from model_validations import PromptModel, FunctionDefinitionModel
+from model_validations import (PromptModel, FunctionDefinitionModel,
+                               PromptError, FunctionDefError)
 from pydantic import ValidationError
 from typing import Any
 
@@ -30,13 +31,13 @@ def validate_prompt_file(input_path: str) -> list[str]:
             except ValidationError as e:
                 for dict_error in e.errors():
                     print(f"Validation Error: {dict_error.get('msg')}")
-                print("Skipping...")
+                print("Skipping the prompt...")
                 continue
 
     except OSError as e:
-        print(f"Error on opening the file: {e}")
+        raise PromptError(f"Error on opening the file: {e}")
     except JSONDecodeError as e:
-        print(f"Invalid JSON: {e.msg}")
+        raise PromptError(f"Invalid JSON: {e.msg}")
 
     return valid_prompts
 
@@ -54,17 +55,12 @@ def validate_function_def_file(input_path: str) -> list[Any]:
             except ValidationError as e:
                 for dict_error in e.errors():
                     print(f"Validation Error: {dict_error.get('msg')}")
-                print("Skipping...")
+                print("Skipping the function definition ...")
                 continue
 
     except OSError as e:
-        print(f"Error on opening the file: {e}")
+        raise FunctionDefError(f"Error on opening the file: {e}")
     except JSONDecodeError as e:
-        print(f"Invalid JSON: {e.msg}")
+        raise FunctionDefError(f"Invalid JSON: {e.msg}")
 
     return valid_func_def
-
-
-# if __name__ == "__main__":
-#     input_path = os.getcwd() + "/data/input/functions_definition.json"
-#     print(validate_function_def_file(input_path))
