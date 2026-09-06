@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/21 09:56:49 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/04 15:22:38 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/06 14:02:49 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -46,11 +46,12 @@ def constraint_decoder(
     vocab_dict: dict[str, int] = get_vocab(model)
     first_char_to_ids: dict[str, list[int]] = get_first_char_to_ids(vocab_dict)
 
+    MAX_GENERATED_TOKENS = 200
     generated_ids: list[int] = []
     while not constraint.is_accepted(state):
-        if (isinstance(constraint, NumberDFA) and len(generated_ids) > 12):
-            generated_ids = generated_ids[:1] + [13] + generated_ids[:-2]
-            return generated_ids
+        if (len(generated_ids) > MAX_GENERATED_TOKENS):
+            raise RuntimeError("Generation exceeds safety limit. "
+                               "Model start hallucinating...")
         if state in constraint._cache:
             valid_tokens = constraint._cache[state]
         else:
@@ -145,11 +146,26 @@ def generate_function(
              for name, desc in options.items()]
     )
 
+    # llm_prompt = (
+    #     "Select the appropriate function from the available functions "
+    #     "and extract its arguments from the user's request.\n"
+    #     f"Available functions: {function_catalog}\n"
+    #     f"User request: {prompt}"
+    #     "Output:"
+    # )
+
     llm_prompt = (
         "Select the appropriate function from the available functions "
         "and extract its arguments from the user's request.\n"
         f"Available functions: {function_catalog}\n"
-        f"User request: {prompt}"
+        "\n"
+        "Example:\n"
+        'Request: Substitute the word "cat" with "dog" in "cat cat"\n'
+        'Output: {"name":"fn_substitute_string_with_regex","parameters":'
+        '{"source_string":"cat cat","regex":"cat","replacement":"dog"}}\n'
+        "\n"
+        "The regex must represent the pattern described by the user. "
+        f"User request: {prompt}\n"
         "Output:"
     )
 
@@ -163,8 +179,12 @@ def generate_function(
         if func_def.get("name") == function_name:
             parameters = func_def.get("parameters")
 
-    param_ids = generate_parameters(parameters, prompt_ids, model,
-                                    number_dfa, string_dfa)
+    try:
+        param_ids = generate_parameters(parameters, prompt_ids, model,
+                                        number_dfa, string_dfa)
+    except RuntimeError as e:
+        print(f"Generation stopped safely: {e}")
+        param_ids = model.encode('", "parameters": null}').tolist()[0]
 
     output_str = model.decode(name_ids[1] + param_ids)
     try:
