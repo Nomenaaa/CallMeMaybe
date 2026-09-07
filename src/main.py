@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/29 06:17:07 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/07 11:01:55 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/07 16:12:08 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -65,20 +65,28 @@ def main() -> None:
     if (len(prompts) == 0):
         raise PromptError("Validation Errror: no prompt found!")
 
-    model = Small_LLM_Model()
-    trie = Trie()
-    for func_def in valid_func_def:
-        trie.insert(func_def.get("name"))
+    constraints: dict[str, Any] = {}
 
-    string_dfa = StringDFA(["END"])
-    number_dfa = NumberDFA(["IN_FRACTION"])
+    model = Small_LLM_Model()
+    name_trie = Trie()
+    for func_def in valid_func_def:
+        name_trie.insert(func_def.get("name"))
+    constraints["name_trie"] = name_trie
+
+    constraints["string_dfa"] = StringDFA(["END"])
+    constraints["integer_dfa"] = NumberDFA(["DOT"])
+    constraints["number_dfa"] = NumberDFA(["IN_FRACTION"])
+
+    bool_trie = Trie()
+    for bool in ["true", "false"]:
+        bool_trie.insert(bool)
+    constraints["bool_trie"] = Trie()
 
     func_calls: list[dict[str, Any]] = []
     for prompt in prompts:
         func_call: dict[str, Any] = {"prompt": prompt}
         print("Generating function call...")
-        output_dict = generate_function(prompt, valid_func_def, model,
-                                        number_dfa, string_dfa, trie)
+        output_dict = generate_function(prompt, valid_func_def, model, constraints)
         func_call.update(output_dict)
         try:
             OutputValidator.model_validate(func_call)
@@ -89,7 +97,10 @@ def main() -> None:
                 raise FunctionCallError(
                     f"Validation Error: {dict_error.get('msg')}")
 
-    with open(args.output, 'w') as file_obj:
+    try:
+        file_obj = open(args.output, 'w')
         dump(func_calls, file_obj, indent=2)
-
-    print(f"Successfully saved functions calls to {args.output}")
+        print(f"Successfully saved functions calls to {args.output}")
+        file_obj.close()
+    except OSError as e:
+        raise FunctionCallError(e)

@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/21 09:56:49 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/07 10:49:20 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/07 16:12:19 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -93,8 +93,8 @@ def generate_parameters(
         parameters: dict[str, Any] | None,
         prompt_ids: list[int],
         model: Small_LLM_Model,
-        number_dfa: NumberDFA,
-        string_dfa: StringDFA) -> list[int]:
+        constraints: list[dict[str, Any]]
+        ) -> list[int]:
 
     if parameters is None:
         gen_ids: list[int] = model.encode('", "parameters": null}').tolist()[0]
@@ -111,12 +111,26 @@ def generate_parameters(
             quote_ids = model.encode('"').tolist()[0]
             gen_ids.extend(quote_ids)
             prompt_ids.extend(quote_ids)
-            value_ids = constraint_decoder(string_dfa, prompt_ids, model)
+            value_ids = constraint_decoder(constraints["string_dfa"],
+                                           prompt_ids, model)
             gen_ids.extend(value_ids)
             prompt_ids.extend(value_ids)
 
-        if value["type"] == "number":
-            value_ids = constraint_decoder(number_dfa, prompt_ids, model)
+        if value["type"] == "integer":
+            value_ids = constraint_decoder(constraints["integer_dfa"],
+                                           prompt_ids, model)
+            gen_ids.extend(value_ids[:-1])
+            prompt_ids.extend(value_ids[:-1])
+
+        if value["type"] == "number" or value["type"] == "float":
+            value_ids = constraint_decoder(constraints["number_dfa"],
+                                           prompt_ids, model)
+            gen_ids.extend(value_ids)
+            prompt_ids.extend(value_ids)
+
+        if value["type"] == "boolean":
+            value_ids = constraint_decoder(constraints["bool_trie"],
+                                                       prompt_ids, model)
             gen_ids.extend(value_ids)
             prompt_ids.extend(value_ids)
 
@@ -133,9 +147,8 @@ def generate_function(
         prompt: str,
         valid_func_def: list[Any],
         model: Small_LLM_Model,
-        number_dfa: NumberDFA,
-        string_dfa: StringDFA,
-        trie: Trie) -> dict[str, Any]:
+        constraints: list[dict[str, Any]]
+        ) -> dict[str, Any]:
 
     options: dict[str, str] = {}
     for func_def in valid_func_def:
@@ -169,7 +182,7 @@ def generate_function(
 
     prompt_ids: list[int] = model.encode(llm_prompt).tolist()[0]
 
-    name_ids = generate_function_name(prompt_ids, model, trie)
+    name_ids = generate_function_name(prompt_ids, model, constraints["name_trie"])
     function_name: str = model.decode(name_ids[0])
     prompt_ids.extend(name_ids[1])
 
@@ -179,7 +192,7 @@ def generate_function(
 
     try:
         param_ids = generate_parameters(parameters, prompt_ids, model,
-                                        number_dfa, string_dfa)
+                                        constraints)
     except RuntimeError as e:
         print(f"Generation stopped safely: {e}")
         param_ids = model.encode('", "parameters": null}').tolist()[0]
