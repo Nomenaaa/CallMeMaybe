@@ -2,3 +2,4 @@ __pycache__/
 .mypy_cache
 my_function_definition.json
 my_test_call.json
+data/output/

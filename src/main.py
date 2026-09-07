@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/29 06:17:07 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/06 20:10:31 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/07 11:01:55 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -20,7 +20,7 @@ from typing import Any
 from argparse import ArgumentParser
 from model_validations import (OutputValidator, FunctionCallError,
                                FunctionDefError, PromptError)
-import json
+from json import dump, dumps
 import os
 
 
@@ -38,7 +38,7 @@ def parser() -> ArgumentParser:
 
     arg_parser.add_argument(
         "--input",
-        default=os.getcwd() + "/data/input/function_calling_test.json",
+        default=os.getcwd() + "/data/input/function_calling_tests.json",
         help="path to get the prompts JSON file to generate the function calls"
     )
 
@@ -55,14 +55,12 @@ def main() -> None:
     args = parser().parse_args()
 
     func_path: str = args.functions_definition
-    print(func_path)
     valid_func_def: list[Any] = validate_function_def_file(func_path)
     if (len(valid_func_def) == 0):
         raise FunctionDefError(
             "Validation Error: no function definition found!")
 
     prompt_path: str = args.input
-    print(prompt_path)
     prompts: list[str] = validate_prompt_file(prompt_path)
     if (len(prompts) == 0):
         raise PromptError("Validation Errror: no prompt found!")
@@ -75,15 +73,23 @@ def main() -> None:
     string_dfa = StringDFA(["END"])
     number_dfa = NumberDFA(["IN_FRACTION"])
 
+    func_calls: list[dict[str, Any]] = []
     for prompt in prompts:
         func_call: dict[str, Any] = {"prompt": prompt}
+        print("Generating function call...")
         output_dict = generate_function(prompt, valid_func_def, model,
                                         number_dfa, string_dfa, trie)
         func_call.update(output_dict)
         try:
             OutputValidator.model_validate(func_call)
-            print(json.dumps(func_call, indent=4))
+            func_calls.append(func_call)
+            print(dumps(func_call, indent=4))
         except ValidationError as e:
             for dict_error in e.errors():
                 raise FunctionCallError(
                     f"Validation Error: {dict_error.get('msg')}")
+
+    with open(args.output, 'w') as file_obj:
+        dump(func_calls, file_obj, indent=2)
+
+    print(f"Successfully saved functions calls to {args.output}")

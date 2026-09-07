@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/21 09:56:49 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/06 14:02:49 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/07 10:49:20 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -158,12 +158,10 @@ def generate_function(
         "Select the appropriate function from the available functions "
         "and extract its arguments from the user's request.\n"
         f"Available functions: {function_catalog}\n"
-        "\n"
         "Example:\n"
         'Request: Substitute the word "cat" with "dog" in "cat cat"\n'
         'Output: {"name":"fn_substitute_string_with_regex","parameters":'
         '{"source_string":"cat cat","regex":"cat","replacement":"dog"}}\n'
-        "\n"
         "The regex must represent the pattern described by the user. "
         f"User request: {prompt}\n"
         "Output:"
