@@ -10,4 +10,13 @@ install:
 	@uv sync
 
 debug:
-	@pdb src
+	@uv run python3 -m pdb src/__main__.py
+
+clean:
+	@find . -type d -name "*cache*" | xargs rm -rf
+
+lint:
+	@uv run flake8 src --exclude=.venv,__pycache__,.mypy_cache
+	@uv run mypy src --warn-return-any --warn-unused-ignores --ignore-missing-imports \
+		--disallow-untyped-defs --check-untyped-defs
+	@$(MAKE) -s clean

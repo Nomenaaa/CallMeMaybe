@@ -7,13 +7,13 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/21 09:56:49 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/07 16:12:19 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/09 12:14:05 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
-from constraint_class import Constraint, StringDFA, NumberDFA, Trie
+from constraint_class import Constraint
 from typing import Any
-from llm_sdk import Small_LLM_Model
+from llm_sdk import Small_LLM_Model  # type: ignore[attr-defined]
 from vocab import get_vocab, get_first_char_to_ids
 from json import JSONDecodeError, loads
 from model_validations import FunctionCallError
@@ -75,7 +75,7 @@ def constraint_decoder(
 def generate_function_name(
         prompt_ids: list[int],
         model: Small_LLM_Model,
-        trie: Trie) -> list[list[int]]:
+        trie: Constraint) -> list[list[int]]:
 
     name_ids: list[list[int]] = []
     gen_ids: list[int] = model.encode('{"name": "').tolist()[0]
@@ -93,7 +93,7 @@ def generate_parameters(
         parameters: dict[str, Any] | None,
         prompt_ids: list[int],
         model: Small_LLM_Model,
-        constraints: list[dict[str, Any]]
+        constraints: dict[str, Constraint]
         ) -> list[int]:
 
     if parameters is None:
@@ -130,7 +130,7 @@ def generate_parameters(
 
         if value["type"] == "boolean":
             value_ids = constraint_decoder(constraints["bool_trie"],
-                                                       prompt_ids, model)
+                                           prompt_ids, model)
             gen_ids.extend(value_ids)
             prompt_ids.extend(value_ids)
 
@@ -147,7 +147,7 @@ def generate_function(
         prompt: str,
         valid_func_def: list[Any],
         model: Small_LLM_Model,
-        constraints: list[dict[str, Any]]
+        constraints: dict[str, Constraint]
         ) -> dict[str, Any]:
 
     options: dict[str, str] = {}
@@ -158,14 +158,6 @@ def generate_function(
             [f"- {name}: {desc}"
              for name, desc in options.items()]
     )
-
-    # llm_prompt = (
-    #     "Select the appropriate function from the available functions "
-    #     "and extract its arguments from the user's request.\n"
-    #     f"Available functions: {function_catalog}\n"
-    #     f"User request: {prompt}"
-    #     "Output:"
-    # )
 
     llm_prompt = (
         "Select the appropriate function from the available functions "
@@ -182,7 +174,8 @@ def generate_function(
 
     prompt_ids: list[int] = model.encode(llm_prompt).tolist()[0]
 
-    name_ids = generate_function_name(prompt_ids, model, constraints["name_trie"])
+    name_ids = generate_function_name(prompt_ids, model,
+                                      constraints["name_trie"])
     function_name: str = model.decode(name_ids[0])
     prompt_ids.extend(name_ids[1])
 

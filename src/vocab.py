@@ -7,11 +7,11 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/18 11:26:49 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/03 09:57:20 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/09 12:14:32 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
-from llm_sdk import Small_LLM_Model
+from llm_sdk import Small_LLM_Model  # type: ignore[attr-defined]
 from collections import defaultdict
 import json
 

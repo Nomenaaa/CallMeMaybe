@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/29 06:17:07 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/07 16:12:08 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/09 12:14:25 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -15,7 +15,7 @@ from load_inputs import validate_prompt_file, validate_function_def_file
 from constraint_class import Trie, StringDFA, NumberDFA
 from generate_functions import generate_function
 from pydantic import ValidationError
-from llm_sdk import Small_LLM_Model
+from llm_sdk import Small_LLM_Model  # type: ignore[attr-defined]
 from typing import Any
 from argparse import ArgumentParser
 from model_validations import (OutputValidator, FunctionCallError,
@@ -78,15 +78,16 @@ def main() -> None:
     constraints["number_dfa"] = NumberDFA(["IN_FRACTION"])
 
     bool_trie = Trie()
-    for bool in ["true", "false"]:
-        bool_trie.insert(bool)
-    constraints["bool_trie"] = Trie()
+    for boolean in ["true", "false"]:
+        bool_trie.insert(boolean)
+    constraints["bool_trie"] = bool_trie
 
     func_calls: list[dict[str, Any]] = []
     for prompt in prompts:
         func_call: dict[str, Any] = {"prompt": prompt}
         print("Generating function call...")
-        output_dict = generate_function(prompt, valid_func_def, model, constraints)
+        output_dict = generate_function(prompt, valid_func_def,
+                                        model, constraints)
         func_call.update(output_dict)
         try:
             OutputValidator.model_validate(func_call)
