@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/21 09:56:49 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/09 12:14:05 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/09 17:05:23 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -23,6 +23,7 @@ def get_valid_tokens(
         constraint: Constraint, state: Any,
         first_char_to_ids: dict[str, list[int]],
         model: Small_LLM_Model) -> dict[int, Any]:
+    """Return the allowed next-token IDs and their resulting states."""
 
     valid_tokens: dict[int, Any] = {}
     candidate_ids: list[int] = constraint.get_candidate_ids(
@@ -41,6 +42,7 @@ def constraint_decoder(
         constraint: Constraint,
         prompt_ids: list[int],
         model: Small_LLM_Model) -> list[int]:
+    """Generate a valid token sequence while respecting the constraint."""
 
     state: Any = constraint.get_start_state()
     vocab_dict: dict[str, int] = get_vocab(model)
@@ -76,6 +78,7 @@ def generate_function_name(
         prompt_ids: list[int],
         model: Small_LLM_Model,
         trie: Constraint) -> list[list[int]]:
+    """Generate the selected function name using the trie constraint."""
 
     name_ids: list[list[int]] = []
     gen_ids: list[int] = model.encode('{"name": "').tolist()[0]
@@ -95,6 +98,7 @@ def generate_parameters(
         model: Small_LLM_Model,
         constraints: dict[str, Constraint]
         ) -> list[int]:
+    """Generate the JSON parameter block for the chosen function definition."""
 
     if parameters is None:
         gen_ids: list[int] = model.encode('", "parameters": null}').tolist()[0]
@@ -149,6 +153,7 @@ def generate_function(
         model: Small_LLM_Model,
         constraints: dict[str, Constraint]
         ) -> dict[str, Any]:
+    """Generate a valid function-call dictionary from a user prompt."""
 
     options: dict[str, str] = {}
     for func_def in valid_func_def:

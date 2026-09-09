@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/17 13:55:12 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/09 13:23:04 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/09 17:05:30 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -23,6 +23,7 @@ RED = "\033[31m"
 
 
 def validate_prompt_file(input_path: str) -> list[str]:
+    """Load and validate a prompt dataset, returning only valid prompt strings."""
     valid_prompts: list[str] = []
     try:
         with open(input_path, 'r') as file_obj:
@@ -48,6 +49,7 @@ def validate_prompt_file(input_path: str) -> list[str]:
 
 
 def validate_function_def_file(input_path: str) -> list[Any]:
+    """Load and validate a function-definition dataset, returning valid entries."""
     valid_func_def: list[Any] = []
     try:
         with open(input_path, 'r') as file_obj:

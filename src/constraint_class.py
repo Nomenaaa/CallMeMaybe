@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/20 10:12:39 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/09 15:40:11 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/09 17:03:15 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -17,40 +17,56 @@ from vocab import collect_ids_from_chars
 
 
 class Constraint(ABC):
+    """Abstract base class for token-generation constraints automata
+       to guide model generation toward valid tokens.
+    """
+
     def __init__(self) -> None:
+        """Initialize the per-state token cache."""
         self._cache: dict[Any, dict[int, Any]] = {}
 
     @abstractmethod
     def simulate_from(self, state: Any, word: str) -> Any:
+        """Advance the constraint state by consuming a token string."""
         pass
 
     @abstractmethod
     def is_accepted(self, state: Any) -> bool:
+        """Return whether the provided state represents a valid completion."""
         pass
 
     @abstractmethod
     def get_candidate_ids(
         self, state: Any, first_char_to_ids: dict[str, list[int]]
     ) -> list[int]:
+        """Return tokens that may legally follow the current state."""
         pass
 
     @abstractmethod
     def get_start_state(self) -> Any:
+        """Return the initial state for the constraint."""
         pass
 
 
 class TrieNode:
+    """Single node in a trie used for word-prefix validation."""
+
     def __init__(self) -> None:
+        """Create an empty trie node with no children yet."""
         self._children: dict[str, TrieNode] = {}
         self._EndOfWord = False
 
 
 class Trie(Constraint):
+    """Constraint that accepts strings matching a set of valid prefixes."""
+
     def __init__(self) -> None:
+        """Create an empty trie and initialize its root node."""
         super().__init__()
         self._root = TrieNode()
 
     def insert(self, option: str) -> None:
+        """Insert a valid string into the trie."""
         curr = self._root
 
         for char in option:
@@ -60,6 +76,7 @@ class Trie(Constraint):
         curr._EndOfWord = True
 
     def simulate_from(self, state: TrieNode, word: str) -> TrieNode | None:
+        """Follow a word through the trie and return the resulting node."""
         curr = state
 
         for char in word:
@@ -69,6 +86,7 @@ class Trie(Constraint):
         return curr
 
     def is_accepted(self, state: TrieNode) -> bool:
+        """Return True when the current trie node ends a valid word."""
         if state._EndOfWord:
             return True
         return False
@@ -76,6 +94,7 @@ class Trie(Constraint):
     def get_candidate_ids(
             self, state: TrieNode, first_char_to_ids: dict[str, list[int]]
     ) -> list[int]:
+        """Collect the token IDs that can continue from the current node."""
         ids: list[int] = []
 
         for key in state._children:
@@ -83,19 +102,25 @@ class Trie(Constraint):
         return ids
 
     def get_start_state(self) -> Any:
+        """Return the trie root state."""
         return self._root
 
 
 class DFA(Constraint, ABC):
+    """Abstract deterministic finite automaton constraint."""
+
     def __init__(self, accepting_states: list[str]):
+        """Store the accepting states for this automaton."""
         super().__init__()
         self._accepted = accepting_states
 
     @abstractmethod
     def transitions(self, state: str, char: str) -> None | str:
+        """Move from a state with a character to the next DFA state."""
         pass
 
     def simulate_from(self, state: str, word: str) -> None | str:
+        """Apply a sequence of characters and return the final automaton state."""
         curr = state
 
         for char in word:
@@ -106,6 +131,7 @@ class DFA(Constraint, ABC):
         return curr
 
     def is_accepted(self, state: str) -> bool:
+        """Return True when the automaton is in an accepting state."""
         if state in self._accepted:
             return True
         return False
@@ -114,15 +140,20 @@ class DFA(Constraint, ABC):
     def get_candidate_ids(
         self, state: str, first_char_to_ids: dict[str, list[int]]
     ) -> list[int]:
+        """Return allowed next-character token IDs for the provided state."""
         pass
 
     @abstractmethod
     def get_start_state(self) -> Any:
+        """Return the DFA start state."""
         pass
 
 
 class StringDFA(DFA):
+    """Finite automaton for validating JSON-style string literals."""
+
     def transitions(self, state: str, char: str) -> None | str:
+        """Transition through the string-literal states."""
         if state == "START":
             return "IN_STRING" if char == '"' else None
         if state == "IN_STRING":
@@ -139,6 +170,7 @@ class StringDFA(DFA):
     def get_candidate_ids(
             self, state: str, first_char_to_ids: dict[str, list[int]]
     ) -> list[int]:
+        """List valid IDs for a string literal continuation."""
         if state == "START":
             return first_char_to_ids.get('"', [])
         if state == "ESCAPE":
@@ -153,11 +185,15 @@ class StringDFA(DFA):
         return []
 
     def get_start_state(self) -> str:
+        """Return the initial string state before the opening quote."""
         return "IN_STRING"
 
 
 class NumberDFA(DFA):
+    """Finite automaton for validating numeric literals."""
+
     def transitions(self, state: str, char: str) -> str | None:
+        """Advance through numeric states for integer and float parsing."""
         if state == "START":
             if char == "-" or char == "+":
                 return "SIGN"
@@ -183,6 +219,7 @@ class NumberDFA(DFA):
     def get_candidate_ids(
             self, state: str, first_char_to_ids: dict[str, list[int]]
     ) -> list[int]:
+        """Provide valid numeric token IDs for the current DFA state."""
         number = collect_ids_from_chars("0123456789", first_char_to_ids)
         if state == "START":
             number.extend(collect_ids_from_chars("+-", first_char_to_ids))
@@ -195,4 +232,5 @@ class NumberDFA(DFA):
         return []
 
     def get_start_state(self) -> str:
+        """Return the initial numeric state."""
         return "START"

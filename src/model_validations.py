@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/17 14:12:30 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/07 16:03:08 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/09 17:05:50 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -16,14 +16,20 @@ from typing import Literal, Any
 
 
 class ParamType(BaseModel):
+    """Schema describing a supported parameter type."""
+
     type: Literal["number", "string", "integer", "float", "boolean"]
 
 
 class PromptModel(BaseModel):
+    """Validation model for a user prompt entry."""
+
     prompt: str = Field(..., min_length=5)
 
 
 class FunctionDefinitionModel(BaseModel):
+    """Validation model for a function definition record."""
+
     name: str = Field(..., min_length=5)
     description: str = Field(..., min_length=15)
     parameters: dict[str, ParamType] | None
@@ -31,18 +37,26 @@ class FunctionDefinitionModel(BaseModel):
 
 
 class OutputValidator(BaseModel):
+    """Validation model for a generated function-call result."""
+
     prompt: str = Field(..., min_length=5)
     name: str = Field(..., min_length=5)
     parameters: dict[str, Any] | None
 
 
 class PromptError(Exception):
+    """Raised when a prompt input cannot be loaded or validated."""
+
     pass
 
 
 class FunctionDefError(Exception):
+    """Raised when a function-definition file fails validation."""
+
     pass
 
 
 class FunctionCallError(Exception):
+    """Raised when a generated function call fails validation or decoding."""
+
     pass

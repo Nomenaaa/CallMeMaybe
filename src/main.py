@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/29 06:17:07 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/09 13:00:25 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/09 17:05:41 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -26,6 +26,7 @@ import typing
 
 
 def parser() -> ArgumentParser:
+    """Create and configure the CLI argument parser for the app."""
     arg_parser = ArgumentParser(
         prog="src",
         description="Program that generates function calls using a LLM"
@@ -53,6 +54,7 @@ def parser() -> ArgumentParser:
 
 
 def main() -> typing.Generator[tuple[str, str], None, None]:
+    """Run the model over valid prompts and yield validated function calls."""
     args = parser().parse_args()
 
     func_path: str = args.functions_definition
@@ -92,7 +94,7 @@ def main() -> typing.Generator[tuple[str, str], None, None]:
         try:
             OutputValidator.model_validate(func_call)
             func_calls.append(func_call)
-            yield((prompt), (dumps(func_call, indent=4)))
+            yield ((prompt), (dumps(func_call, indent=4)))
         except ValidationError as e:
             for dict_error in e.errors():
                 raise FunctionCallError(

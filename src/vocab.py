@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/18 11:26:49 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/09 12:14:32 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/09 17:05:57 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -17,6 +17,7 @@ import json
 
 
 def get_vocab(model: Small_LLM_Model) -> dict[str, int]:
+    """Load the tokenizer vocabulary file associated with the model."""
     with open(model.get_path_to_vocab_file(), 'r') as file:
         vocab_dict: dict[str, int] = json.load(file)
 
@@ -24,6 +25,7 @@ def get_vocab(model: Small_LLM_Model) -> dict[str, int]:
 
 
 def get_first_char_to_ids(vocab_dict: dict[str, int]) -> dict[str, list[int]]:
+    """Map each leading character to the token IDs whose strings start with it."""
     group: defaultdict[str, list[int]] = defaultdict(list)
 
     for vocab_str, vocab_id in vocab_dict.items():
@@ -36,6 +38,7 @@ def get_first_char_to_ids(vocab_dict: dict[str, int]) -> dict[str, list[int]]:
 
 def collect_ids_from_chars(
         chars: str, first_char_to_ids: dict[str, list[int]]) -> list[int]:
+    """Collect all token IDs for the provided characters in order."""
     ids = []
 
     for ch in chars:
