@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/20 10:12:39 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/04 15:20:22 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/09 15:40:11 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -185,10 +185,10 @@ class NumberDFA(DFA):
     ) -> list[int]:
         number = collect_ids_from_chars("0123456789", first_char_to_ids)
         if state == "START":
-            number.extend([10, 12])
+            number.extend(collect_ids_from_chars("+-", first_char_to_ids))
             return number
         if state == "IN_NUMBER":
-            number.extend([13])
+            number.extend(first_char_to_ids.get('.', []))
             return number
         if state in ["SIGN", "DOT", "IN_FRACTION"]:
             return number
