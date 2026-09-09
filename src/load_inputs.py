@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/17 13:55:12 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/03 10:58:59 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/09 13:23:04 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -16,6 +16,10 @@ from model_validations import (PromptModel, FunctionDefinitionModel,
                                PromptError, FunctionDefError)
 from pydantic import ValidationError
 from typing import Any
+
+
+RESET = "\033[0m"
+RED = "\033[31m"
 
 
 def validate_prompt_file(input_path: str) -> list[str]:
@@ -30,7 +34,8 @@ def validate_prompt_file(input_path: str) -> list[str]:
                 valid_prompts.append(item['prompt'])
             except ValidationError as e:
                 for dict_error in e.errors():
-                    print(f"Validation Error: {dict_error.get('msg')}")
+                    print(f"{RED}Validation Error: {dict_error.get('msg')}"
+                          f"{RESET}")
                 print("Skipping the prompt...")
                 continue
 
@@ -54,7 +59,8 @@ def validate_function_def_file(input_path: str) -> list[Any]:
                 valid_func_def.append(item)
             except ValidationError as e:
                 for dict_error in e.errors():
-                    print(f"Validation Error: {dict_error.get('msg')}")
+                    print(f"{RED}Validation Error: {dict_error.get('msg')}"
+                          f"{RESET}")
                 print("Skipping the function definition ...")
                 continue
 

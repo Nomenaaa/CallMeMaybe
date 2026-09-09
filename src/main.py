@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/29 06:17:07 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/09 12:14:25 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/09 13:00:25 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -22,6 +22,7 @@ from model_validations import (OutputValidator, FunctionCallError,
                                FunctionDefError, PromptError)
 from json import dump, dumps
 import os
+import typing
 
 
 def parser() -> ArgumentParser:
@@ -51,7 +52,7 @@ def parser() -> ArgumentParser:
     return arg_parser
 
 
-def main() -> None:
+def main() -> typing.Generator[tuple[str, str], None, None]:
     args = parser().parse_args()
 
     func_path: str = args.functions_definition
@@ -85,14 +86,13 @@ def main() -> None:
     func_calls: list[dict[str, Any]] = []
     for prompt in prompts:
         func_call: dict[str, Any] = {"prompt": prompt}
-        print("Generating function call...")
         output_dict = generate_function(prompt, valid_func_def,
                                         model, constraints)
         func_call.update(output_dict)
         try:
             OutputValidator.model_validate(func_call)
             func_calls.append(func_call)
-            print(dumps(func_call, indent=4))
+            yield((prompt), (dumps(func_call, indent=4)))
         except ValidationError as e:
             for dict_error in e.errors():
                 raise FunctionCallError(
@@ -101,7 +101,6 @@ def main() -> None:
     try:
         file_obj = open(args.output, 'w')
         dump(func_calls, file_obj, indent=2)
-        print(f"Successfully saved functions calls to {args.output}")
         file_obj.close()
     except OSError as e:
         raise FunctionCallError(e)
