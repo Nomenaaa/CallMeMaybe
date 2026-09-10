@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/29 06:17:07 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/09 17:05:41 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/10 18:08:11 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -26,7 +26,11 @@ import typing
 
 
 def parser() -> ArgumentParser:
-    """Create and configure the CLI argument parser for the app."""
+    """Create and configure the CLI argument parser for the program.
+
+    Returns:
+        Configured parser for the CLI arguments.
+    """
     arg_parser = ArgumentParser(
         prog="src",
         description="Program that generates function calls using a LLM"
@@ -54,7 +58,16 @@ def parser() -> ArgumentParser:
 
 
 def main() -> typing.Generator[tuple[str, str], None, None]:
-    """Run the model over valid prompts and yield validated function calls."""
+    """Run the model over valid prompts and yield validated function calls.
+
+    Yields:
+        A prompt and its generated JSON function-call payload.
+
+    Raises:
+        FunctionDefError: If no valid function definitions are found.
+        PromptError: If no valid prompts are found.
+        FunctionCallError: If output validation fails.
+    """
     args = parser().parse_args()
 
     func_path: str = args.functions_definition

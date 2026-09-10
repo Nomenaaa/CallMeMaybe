@@ -7,7 +7,7 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/17 14:12:30 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/09 17:05:50 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/10 18:09:55 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -16,19 +16,34 @@ from typing import Literal, Any
 
 
 class ParamType(BaseModel):
-    """Schema describing a supported parameter type."""
+    """Schema describing a supported parameter type.
+
+    Attributes:
+        type: The parameter type accepted by the model.
+    """
 
     type: Literal["number", "string", "integer", "float", "boolean"]
 
 
 class PromptModel(BaseModel):
-    """Validation model for a user prompt entry."""
+    """Validation model for a user prompt entry.
+
+    Attributes:
+        prompt: The prompt text to validate.
+    """
 
     prompt: str = Field(..., min_length=5)
 
 
 class FunctionDefinitionModel(BaseModel):
-    """Validation model for a function definition record."""
+    """Validation model for a function definition record.
+
+    Attributes:
+        name: Name of the function.
+        description: Human-readable description of the function.
+        parameters: Structured parameters accepted by the function.
+        returns: Return type declared by the function.
+    """
 
     name: str = Field(..., min_length=5)
     description: str = Field(..., min_length=15)
@@ -37,7 +52,13 @@ class FunctionDefinitionModel(BaseModel):
 
 
 class OutputValidator(BaseModel):
-    """Validation model for a generated function-call result."""
+    """Validation model for a generated function-call result.
+
+    Attributes:
+        prompt: Prompt associated with the generated payload.
+        name: Name of the selected function.
+        parameters: Generated arguments passed to the function.
+    """
 
     prompt: str = Field(..., min_length=5)
     name: str = Field(..., min_length=5)
