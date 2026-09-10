@@ -32,14 +32,14 @@ class Constraint(ABC):
 
     @abstractmethod
     def is_accepted(self, state: Any) -> bool:
-        """Return whether the provided state represents a valid completion."""
+        """Check whether the provided state represents a valid completion."""
         pass
 
     @abstractmethod
     def get_candidate_ids(
         self, state: Any, first_char_to_ids: dict[str, list[int]]
     ) -> list[int]:
-        """Return tokens that may legally follow the current state."""
+        """Collect the token IDs that can legally continue from the current node."""
         pass
 
     @abstractmethod
@@ -76,7 +76,7 @@ class Trie(Constraint):
         curr._EndOfWord = True
 
     def simulate_from(self, state: TrieNode, word: str) -> TrieNode | None:
-        """Follow a word through the trie and return the resulting node."""
+        """Advance the constraint state by consuming a token string."""
         curr = state
 
         for char in word:
@@ -86,7 +86,7 @@ class Trie(Constraint):
         return curr
 
     def is_accepted(self, state: TrieNode) -> bool:
-        """Return True when the current trie node ends a valid word."""
+        """Check whether the provided state represents a valid completion."""
         if state._EndOfWord:
             return True
         return False
@@ -94,7 +94,7 @@ class Trie(Constraint):
     def get_candidate_ids(
             self, state: TrieNode, first_char_to_ids: dict[str, list[int]]
     ) -> list[int]:
-        """Collect the token IDs that can continue from the current node."""
+        """Collect the token IDs that can legally continue from the current node."""
         ids: list[int] = []
 
         for key in state._children:
@@ -102,7 +102,7 @@ class Trie(Constraint):
         return ids
 
     def get_start_state(self) -> Any:
-        """Return the trie root state."""
+        """Return the initial state for the constraint."""
         return self._root
 
 
@@ -120,7 +120,7 @@ class DFA(Constraint, ABC):
         pass
 
     def simulate_from(self, state: str, word: str) -> None | str:
-        """Apply a sequence of characters and return the final automaton state."""
+        """Advance the constraint state by consuming a token string."""
         curr = state
 
         for char in word:
@@ -131,7 +131,7 @@ class DFA(Constraint, ABC):
         return curr
 
     def is_accepted(self, state: str) -> bool:
-        """Return True when the automaton is in an accepting state."""
+        """Check whether the provided state represents a valid completion."""
         if state in self._accepted:
             return True
         return False
@@ -140,12 +140,12 @@ class DFA(Constraint, ABC):
     def get_candidate_ids(
         self, state: str, first_char_to_ids: dict[str, list[int]]
     ) -> list[int]:
-        """Return allowed next-character token IDs for the provided state."""
+        """Collect the token IDs that can continue from the current node."""
         pass
 
     @abstractmethod
     def get_start_state(self) -> Any:
-        """Return the DFA start state."""
+        """Return the initial state for the constraint."""
         pass
 
 
@@ -170,7 +170,7 @@ class StringDFA(DFA):
     def get_candidate_ids(
             self, state: str, first_char_to_ids: dict[str, list[int]]
     ) -> list[int]:
-        """List valid IDs for a string literal continuation."""
+        """Collect the token IDs that can legally continue from the current node."""
         if state == "START":
             return first_char_to_ids.get('"', [])
         if state == "ESCAPE":
@@ -185,7 +185,7 @@ class StringDFA(DFA):
         return []
 
     def get_start_state(self) -> str:
-        """Return the initial string state before the opening quote."""
+        """Return the initial state for the constraint."""
         return "IN_STRING"
 
 
@@ -219,7 +219,7 @@ class NumberDFA(DFA):
     def get_candidate_ids(
             self, state: str, first_char_to_ids: dict[str, list[int]]
     ) -> list[int]:
-        """Provide valid numeric token IDs for the current DFA state."""
+        """Collect the token IDs that can legally continue from the current node."""
         number = collect_ids_from_chars("0123456789", first_char_to_ids)
         if state == "START":
             number.extend(collect_ids_from_chars("+-", first_char_to_ids))
@@ -232,5 +232,5 @@ class NumberDFA(DFA):
         return []
 
     def get_start_state(self) -> str:
-        """Return the initial numeric state."""
+        """Return the initial state for the constraint."""
         return "START"
