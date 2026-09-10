@@ -174,7 +174,7 @@ class StringDFA(DFA):
         if state == "START":
             return first_char_to_ids.get('"', [])
         if state == "ESCAPE":
-            return collect_ids_from_chars("\\'\"nrtbfva", first_char_to_ids)
+            return collect_ids_from_chars("\\'\"bnfrtu/", first_char_to_ids)
         if state == "IN_STRING":
             ids = []
             for ch, ch_ids in first_char_to_ids.items():
