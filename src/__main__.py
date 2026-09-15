@@ -15,7 +15,6 @@ from model_validations import PromptError, FunctionDefError, FunctionCallError
 from main import main, parser
 import sys
 
-#ANSI escape codes
 RESET = "\033[0m"
 RED = "\033[31m"
 GREEN = "\033[32m"
@@ -34,8 +33,23 @@ try:
     print(f"{YELLOW}Getting the prompts from {args.input} ...{RESET}")
     print(f"{YELLOW}Getting the function definitions from "
           f"{args.functions_definition} ...{RESET}")
-    print(f"{YELLOW}Loading Qwen 0.6B ... {RESET}")
-    gen = main()
+
+    while True:
+        choice = input(
+            "Choose a model:\n"
+            "(1) Qwen/Qwen3-0.6B (default)\n"
+            "(2) Qwen/Qwen2.5-1.5B-Instruct\n"
+            "Select 1 or 2 or 'p' to pass: ")
+        if choice == "1" or choice == "p":
+            print(f"{YELLOW}Loading Qwen3-0.6B... {RESET}")
+            gen = main("Qwen/Qwen3-0.6B")
+            break
+        if choice == "2":
+            print(f"{YELLOW}Loading Qwen2.5-1.5B-Instruct... {RESET}")
+            gen = main("Qwen/Qwen2.5-1.5B-Instruct")
+            break
+        continue
+
     while True:
         try:
             prompt, func_call = next(gen)

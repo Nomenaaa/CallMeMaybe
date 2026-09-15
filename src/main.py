@@ -57,7 +57,7 @@ def parser() -> ArgumentParser:
     return arg_parser
 
 
-def main() -> typing.Generator[tuple[str, str], None, None]:
+def main(model_name: str) -> typing.Generator[tuple[str, str], None, None]:
     """Run the model over valid prompts and yield validated function calls.
 
     Yields:
@@ -83,7 +83,7 @@ def main() -> typing.Generator[tuple[str, str], None, None]:
 
     constraints: dict[str, Any] = {}
 
-    model = Small_LLM_Model()
+    model = Small_LLM_Model(model_name)
     name_trie = Trie()
     for func_def in valid_func_def:
         name_trie.insert(func_def.get("name"))

@@ -61,6 +61,20 @@ make lint
 
 # Resources
 
+- [LLM Overview](https://www.geeksforgeeks.org/artificial-intelligence/large-language-model-llm/)
+- [Constrained Generation](https://medium.com/%40docherty/controlling-your-llm-deep-dive-into-constrained-generation-1e561c736a20)
+- [Constrained Decoding](https://mbrenndoerfer.com/writing/constrained-decoding-structured-llm-output?utm_source=chatgpt.com#google_vignette)
+- [JSON Module](https://www.geeksforgeeks.org/python/python-json/)
+- [Argparse Module](https://www.geeksforgeeks.org/python/command-line-option-and-argument-parsing-using-argparse-in-python/)
+- [Trie Data Structure](https://www.geeksforgeeks.org/dsa/trie-insert-and-search/)
+- [Finite Automata](https://www.geeksforgeeks.org/theory-of-computation/introduction-of-finite-automata/)
+
+AI was used to:
+- help in writing Docstrings, README
+- help in designing the structure of the project
+- help in writing test cases (function definitons, prompts)
+- help in listing some models to test with for the bonus feature
+
 # Algorithm explanation
 
 The project uses constrained decoding to keep generation valid.
@@ -140,3 +154,9 @@ Example generated result:
 ```
 
 This demonstrates the central behavior of the project: converting a prompt into a valid, typed function-call object using constrained decoding.
+
+# Bonus implementation
+
+For the bonus features:
+- Visualization
+- Support for `Qwen/Qwen2.5-1.5B-Instruct`
