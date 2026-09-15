@@ -11,7 +11,7 @@
 #                                                                             #
 # ########################################################################### #
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Literal, Any
 
 
@@ -32,6 +32,7 @@ class PromptModel(BaseModel):
         prompt: The prompt text to validate.
     """
 
+    model_config = ConfigDict(extra='forbid')
     prompt: str = Field(..., min_length=5)
 
 
@@ -45,6 +46,7 @@ class FunctionDefinitionModel(BaseModel):
         returns: Return type declared by the function.
     """
 
+    model_config = ConfigDict(extra='forbid')
     name: str = Field(..., min_length=5)
     description: str = Field(..., min_length=15)
     parameters: dict[str, ParamType] | None
