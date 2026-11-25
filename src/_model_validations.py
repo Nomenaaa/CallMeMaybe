@@ -2,12 +2,12 @@
 # ########################################################################### #
 #   shebang: 1                                                                #
 #                                                          :::      ::::::::  #
-#   model_validations.py                                 :+:      :+:    :+:  #
+#   _model_validations.py                                :+:      :+:    :+:  #
 #                                                      +:+ +:+         +:+    #
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/17 14:12:30 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/10 18:09:55 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/10/15 08:23:04 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -22,6 +22,7 @@ class ParamType(BaseModel):
         type: The parameter type accepted by the model.
     """
 
+    model_config = ConfigDict(extra='forbid')
     type: Literal["number", "string", "integer", "float", "boolean"]
 
 
@@ -33,7 +34,7 @@ class PromptModel(BaseModel):
     """
 
     model_config = ConfigDict(extra='forbid')
-    prompt: str = Field(..., min_length=5)
+    prompt: str = Field(...)
 
 
 class FunctionDefinitionModel(BaseModel):
@@ -47,8 +48,8 @@ class FunctionDefinitionModel(BaseModel):
     """
 
     model_config = ConfigDict(extra='forbid')
-    name: str = Field(..., min_length=5)
-    description: str = Field(..., min_length=15)
+    name: str = Field(...)
+    description: str = Field(...)
     parameters: dict[str, ParamType] | None
     returns: ParamType
 
@@ -62,8 +63,8 @@ class OutputValidator(BaseModel):
         parameters: Generated arguments passed to the function.
     """
 
-    prompt: str = Field(..., min_length=5)
-    name: str = Field(..., min_length=5)
+    prompt: str = Field(...)
+    name: str | None
     parameters: dict[str, Any] | None
 
 

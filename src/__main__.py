@@ -7,12 +7,27 @@
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/09/03 10:47:00 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/09 15:20:03 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/09/21 13:52:51 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
-from model_validations import PromptError, FunctionDefError, FunctionCallError
-from main import main, parser
+"""Execution entry point of the program.
+
+Usage:
+src [-h] [--functions_definition FUNCTIONS_DEFINITION] [--input INPUT]
+    [--output OUTPUT]
+
+Flags:
+  -h, --help            show this help message and exit
+  --functions_definition FUNCTIONS_DEFINITION
+                        path to get the functions definition JSON file
+  --input INPUT         path to get the prompts JSON file to generate
+  --output OUTPUT       path to write the function calls generated
+"""
+
+from ._model_validations import (PromptError, FunctionDefError,
+                                 FunctionCallError)
+from ._main import main, parser
 import sys
 
 RESET = "\033[0m"

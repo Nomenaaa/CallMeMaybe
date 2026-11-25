@@ -2,176 +2,19 @@
 # ########################################################################### #
 #   shebang: 1                                                                #
 #                                                          :::      ::::::::  #
-#   constraint_class.py                                  :+:      :+:    :+:  #
+#   _dfa_constraint.py                                   :+:      :+:    :+:  #
 #                                                      +:+ +:+         +:+    #
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
-#   Created: 2026/08/20 10:12:39 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/10 17:52:13 by nrasolom           ###   ########.fr      #
+#   Created: 2026/09/15 14:12:01 by nrasolom            #+#    #+#            #
+#   Updated: 2026/10/15 07:55:38 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
 from abc import ABC, abstractmethod
 from typing import Any
-from vocab import collect_ids_from_chars
-
-
-class Constraint(ABC):
-    """Abstract base class for automaton-based token-generation constraints.
-
-    Attributes:
-        cache: Cache of valid token IDs keyed by state.
-    """
-
-    def __init__(self) -> None:
-        self._cache: dict[Any, dict[int, Any]] = {}
-
-    @abstractmethod
-    def simulate_from(self, state: Any, word: str) -> Any:
-        """Advance the constraint state by consuming a token string.
-
-        Args:
-            state: The current state, either a string or a trie node.
-            word: The token string to simulate.
-
-        Returns:
-            Any: The next state after consuming the token string.
-        """
-        pass
-
-    @abstractmethod
-    def is_accepted(self, state: Any) -> bool:
-        """Check whether the provided state represents a valid completion.
-
-        Args:
-            state: The current state to evaluate.
-
-        Returns:
-            True if the state is accepting, otherwise False.
-        """
-        pass
-
-    @abstractmethod
-    def get_candidate_ids(
-        self, state: Any, first_char_to_ids: dict[str, list[int]]
-    ) -> list[int]:
-        """Collect the token IDs that may legally continue from a state.
-
-        Args:
-            state: The current state, either a string or a trie node.
-            first_char_to_ids: Mapping from a character to
-                the token IDs that begin with it.
-
-        Returns:
-            Candidate token IDs pre-filtred as possible valid from this state.
-        """
-        pass
-
-    @abstractmethod
-    def get_start_state(self) -> Any:
-        """Return the initial state for the constraint.
-
-        Returns:
-            The initial state of the automaton or trie.
-        """
-        pass
-
-
-class TrieNode:
-    """Single node in a trie used for word-prefix validation.
-
-    Attributes:
-        children: Mapping from a character to its child node.
-        EndOfWord: Whether the current node marks the end of a valid word.
-    """
-
-    def __init__(self) -> None:
-        self._children: dict[str, TrieNode] = {}
-        self._EndOfWord = False
-
-
-class Trie(Constraint):
-    """Constraint that accepts strings matching a set of valid prefixes.
-
-    Attributes:
-        root: Root node of the trie.
-    """
-
-    def __init__(self) -> None:
-        super().__init__()
-        self._root = TrieNode()
-
-    def insert(self, option: str) -> None:
-        """Insert a word into the trie.
-
-        Args:
-            option: The string to insert.
-        """
-        curr = self._root
-
-        for char in option:
-            if char not in curr._children:
-                curr._children[char] = TrieNode()
-            curr = curr._children[char]
-        curr._EndOfWord = True
-
-    def simulate_from(self, state: TrieNode, word: str) -> TrieNode | None:
-        """Advance the trie state by consuming a word.
-
-        Args:
-            state: The current trie node.
-            word: The word to consume.
-
-        Returns:
-            The node reached after consuming the word, or None if invalid.
-        """
-        curr = state
-
-        for char in word:
-            if char not in curr._children:
-                return None
-            curr = curr._children[char]
-        return curr
-
-    def is_accepted(self, state: TrieNode) -> bool:
-        """Check whether the trie node marks the end of a valid word.
-
-        Args:
-            state: The trie node to evaluate.
-
-        Returns:
-            bool: True if the word is complete, otherwise False.
-        """
-        if state._EndOfWord:
-            return True
-        return False
-
-    def get_candidate_ids(
-            self, state: TrieNode, first_char_to_ids: dict[str, list[int]]
-    ) -> list[int]:
-        """Collect valid next-token IDs from the current trie node.
-
-        Args:
-            state: The current trie node.
-            first_char_to_ids: Mapping from a character to
-                the token IDs that begin with it.
-
-        Returns:
-            Token IDs whose first character matches a valid child.
-        """
-        ids: list[int] = []
-
-        for key in state._children:
-            ids.extend(first_char_to_ids.get(key, []))
-        return ids
-
-    def get_start_state(self) -> Any:
-        """Return the root node of the trie.
-
-        Returns:
-            The start state of the trie.
-        """
-        return self._root
+from .._vocab import collect_ids_from_chars
+from ._constraint_class import Constraint
 
 
 class DFA(Constraint, ABC):
@@ -185,6 +28,7 @@ class DFA(Constraint, ABC):
     """
 
     def __init__(self, accepting_states: list[str]):
+        """Initiliaze the DFA constraint instance."""
         super().__init__()
         self._accepted = accepting_states
 
@@ -301,7 +145,9 @@ class StringDFA(DFA):
         if state == "START":
             return first_char_to_ids.get('"', [])
         if state == "ESCAPE":
-            return collect_ids_from_chars("\\'\"bnfrtu/", first_char_to_ids)
+            ids: list[int] = collect_ids_from_chars(
+                "\\'\"bnfrtu/", first_char_to_ids)
+            return ids
         if state == "IN_STRING":
             ids = []
             for ch, ch_ids in first_char_to_ids.items():
@@ -352,7 +198,12 @@ class NumberDFA(DFA):
         if state == "DOT":
             return "IN_FRACTION" if char.isdigit() else None
         if state == "IN_FRACTION":
-            return "IN_FRACTION" if char.isdigit() else None
+            if char.isdigit():
+                return "IN_FRACTION"
+            elif char == ",":
+                return "END"
+            else:
+                return None
         return None
 
     def get_candidate_ids(
@@ -368,14 +219,18 @@ class NumberDFA(DFA):
         Returns:
             Token IDs that may legally continue from the current state.
         """
-        number = collect_ids_from_chars("0123456789", first_char_to_ids)
+        number: list[int] = collect_ids_from_chars(
+            "0123456789", first_char_to_ids)
         if state == "START":
             number.extend(collect_ids_from_chars("+-", first_char_to_ids))
             return number
         if state == "IN_NUMBER":
             number.extend(first_char_to_ids.get('.', []))
             return number
-        if state in ["SIGN", "DOT", "IN_FRACTION"]:
+        if state in ["SIGN", "DOT"]:
+            return number
+        if state == "IN_FRACTION":
+            number.extend(first_char_to_ids.get(",", []))
             return number
         return []
 

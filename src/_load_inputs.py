@@ -2,24 +2,46 @@
 # ########################################################################### #
 #   shebang: 1                                                                #
 #                                                          :::      ::::::::  #
-#   load_inputs.py                                       :+:      :+:    :+:  #
+#   _load_inputs.py                                      :+:      :+:    :+:  #
 #                                                      +:+ +:+         +:+    #
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/17 13:55:12 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/10 18:06:49 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/10/19 09:27:47 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
 from json import load, JSONDecodeError
-from model_validations import (PromptModel, FunctionDefinitionModel,
-                               PromptError, FunctionDefError)
+from ._model_validations import (PromptModel, FunctionDefinitionModel,
+                                 PromptError, FunctionDefError)
 from pydantic import ValidationError
 from typing import Any
 
 
 RESET = "\033[0m"
 RED = "\033[31m"
+
+
+def check_double_key(param: list[tuple[Any, Any]]) -> dict[Any, Any]:
+    """Build a dict from key/value pairs, rejecting duplicate keys.
+
+    Args:
+        param: Ordered list of ``(key, value)`` pairs for a single JSON
+            object, as provided by the JSON decoder.
+
+    Returns:
+        A dictionary mapping each key to its value, preserving the order in
+        which the keys appeared.
+
+    Raises:
+        ValueError: If the same key appears more than once in ``param``.
+    """
+    load_dict: dict[Any, Any] = {}
+    for key, value in param:
+        if key in load_dict:
+            raise ValueError(f"Duplicated key for {key}")
+        load_dict[key] = value
+    return load_dict
 
 
 def validate_prompt_file(input_path: str) -> list[str]:
@@ -38,7 +60,7 @@ def validate_prompt_file(input_path: str) -> list[str]:
     valid_prompts: list[str] = []
     try:
         with open(input_path, 'r') as file_obj:
-            prompts = load(file_obj)
+            prompts = load(file_obj, object_pairs_hook=check_double_key)
 
         for item in prompts:
             try:
@@ -55,6 +77,8 @@ def validate_prompt_file(input_path: str) -> list[str]:
         raise PromptError(f"Error on opening the file: {e}")
     except JSONDecodeError as e:
         raise PromptError(f"Invalid JSON: {e.msg}")
+    except ValueError as e:
+        raise PromptError(f"Invalid JSON: {e}")
 
     return valid_prompts
 
@@ -75,7 +99,7 @@ def validate_function_def_file(input_path: str) -> list[Any]:
     valid_func_def: list[Any] = []
     try:
         with open(input_path, 'r') as file_obj:
-            func_def = load(file_obj)
+            func_def = load(file_obj, object_pairs_hook=check_double_key)
 
         for item in func_def:
             try:
@@ -83,14 +107,14 @@ def validate_function_def_file(input_path: str) -> list[Any]:
                 valid_func_def.append(item)
             except ValidationError as e:
                 for dict_error in e.errors():
-                    print(f"{RED}Validation Error: {dict_error.get('msg')}"
-                          f"{RESET}")
-                print("Skipping the function definition ...")
-                continue
+                    raise FunctionDefError("Validation Error: "
+                                           f"{dict_error.get('msg')}")
 
     except OSError as e:
         raise FunctionDefError(f"Error on opening the file: {e}")
     except JSONDecodeError as e:
         raise FunctionDefError(f"Invalid JSON: {e.msg}")
+    except ValueError as e:
+        raise PromptError(f"Invalid JSON: {e}")
 
     return valid_func_def

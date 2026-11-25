@@ -2,47 +2,45 @@
 # ########################################################################### #
 #   shebang: 1                                                                #
 #                                                          :::      ::::::::  #
-#   generate_functions.py                                :+:      :+:    :+:  #
+#   _generate_functions.py                               :+:      :+:    :+:  #
 #                                                      +:+ +:+         +:+    #
 #   By: nrasolom <nrasolom@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/08/21 09:56:49 by nrasolom            #+#    #+#            #
-#   Updated: 2026/09/10 18:04:51 by nrasolom           ###   ########.fr      #
+#   Updated: 2026/10/19 09:24:25 by nrasolom           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
-from constraint_class import Constraint
+from .constraint import Constraint, NumberDFA, StringDFA
 from typing import Any
 from llm_sdk import Small_LLM_Model  # type: ignore[attr-defined]
-from vocab import get_vocab, get_first_char_to_ids
+from ._vocab import Vocab
 from json import JSONDecodeError, loads
-from model_validations import FunctionCallError
+from ._model_validations import FunctionCallError
 
 
 def get_valid_tokens(
-        constraint: Constraint, state: Any,
-        first_char_to_ids: dict[str, list[int]],
-        model: Small_LLM_Model) -> dict[int, Any]:
+        constraint: Constraint,
+        state: Any,
+        vocab: Vocab) -> dict[int, Any]:
     """Return the valid next-token IDs and their resulting states.
 
     Args:
         constraint: The constraint automaton used to validate tokens.
         state: The current constraint state.
-        first_char_to_ids: Mapping from a character to
-            the token IDs that begins with it.
-        model: The language model used for decoding token IDs.
+        vocab: model's vocabulary, providing token id/string
+            lookups and decoding.
 
     Returns:
         Mapping from valid token IDs to the next state produced by
             consuming each token string.
     """
-
     valid_tokens: dict[int, Any] = {}
     candidate_ids: list[int] = constraint.get_candidate_ids(
-        state, first_char_to_ids)
+        state, vocab.first_char_to_ids)
 
     for token_id in candidate_ids:
-        token_str = model.decode(token_id)
+        token_str = vocab.decode(token_id)
         next_state = constraint.simulate_from(state, token_str)
         if next_state is not None:
             valid_tokens[token_id] = next_state
@@ -53,13 +51,16 @@ def get_valid_tokens(
 def constraint_decoder(
         constraint: Constraint,
         prompt_ids: list[int],
-        model: Small_LLM_Model) -> list[int]:
+        model: Small_LLM_Model,
+        vocab: Vocab) -> list[int]:
     """Generate a valid token sequence while respecting the constraint.
 
     Args:
         constraint: The constraint automaton to enforce.
         prompt_ids: Token IDs already provided as context.
         model: The language model used to score token choices.
+        vocab: model's vocabulary, providing token id/string
+                lookups and decoding.
 
     Returns:
         Generated token IDs that satisfy the constraint.
@@ -67,22 +68,28 @@ def constraint_decoder(
     Raises:
         RuntimeError: if generated tokens exceed the MAX_GENERATED_TOKENS.
     """
-
     state: Any = constraint.get_start_state()
-    vocab_dict: dict[str, int] = get_vocab(model)
-    first_char_to_ids: dict[str, list[int]] = get_first_char_to_ids(vocab_dict)
 
-    MAX_GENERATED_TOKENS = 200
+    if isinstance(constraint, NumberDFA):
+        MAX_GENERATED_TOKENS = 50
+    else:
+        MAX_GENERATED_TOKENS = 100
+
     generated_ids: list[int] = []
     while not constraint.is_accepted(state):
         if (len(generated_ids) > MAX_GENERATED_TOKENS):
-            raise RuntimeError("Generation exceeds safety limit. "
-                               "Model start hallucinating...")
+            print("Generation stopped safely: "
+                  "Generation exceeds safety limit. "
+                  "Model start hallucinating...")
+            if isinstance(constraint, StringDFA):
+                generated_ids.append(model.encode('"').tolist()[0])
+            return generated_ids
+
         if state in constraint._cache:
             valid_tokens = constraint._cache[state]
         else:
             valid_tokens = get_valid_tokens(
-                constraint, state, first_char_to_ids, model)
+                constraint, state, vocab)
             constraint._cache[state] = valid_tokens
 
         logits = model.get_logits_from_input_ids(prompt_ids)
@@ -101,24 +108,26 @@ def constraint_decoder(
 def generate_function_name(
         prompt_ids: list[int],
         model: Small_LLM_Model,
-        trie: Constraint) -> list[list[int]]:
+        trie: Constraint,
+        vocab: Vocab) -> list[list[int]]:
     """Generate the selected function name using the trie constraint.
 
     Args:
         prompt_ids: Token IDs already provided as context.
         model: The language model used for generation.
         trie: Trie constraint describing valid function names.
+        vocab: model's vocabulary, providing token id/string
+                lookups and decoding.
 
     Returns:
         A pair of token ID lists: the function name and the full
             generated list containing it.
     """
-
     name_ids: list[list[int]] = []
     gen_ids: list[int] = model.encode('{"name": "').tolist()[0]
     prompt_ids.extend(gen_ids)
 
-    func_name_ids = constraint_decoder(trie, prompt_ids, model)
+    func_name_ids = constraint_decoder(trie, prompt_ids, model, vocab)
     name_ids.append(func_name_ids)
     gen_ids.extend(func_name_ids)
     name_ids.append(gen_ids)
@@ -130,8 +139,8 @@ def generate_parameters(
         parameters: dict[str, Any] | None,
         prompt_ids: list[int],
         model: Small_LLM_Model,
-        constraints: dict[str, Constraint]
-        ) -> list[int]:
+        constraints: dict[str, Constraint],
+        vocab: Vocab) -> list[int]:
     """Generate the JSON parameter block for the selected function definition.
 
     Args:
@@ -141,11 +150,12 @@ def generate_parameters(
         model: The language model used for token generation.
         constraints: Mapping of constraint names to
             automata used to guide valid token generation.
+        vocab: model's vocabulary, providing token id/string
+            lookups and decoding.
 
     Returns:
         Generated token IDs for the JSON parameter block.
     """
-
     if parameters is None:
         gen_ids: list[int] = model.encode('", "parameters": null}').tolist()[0]
         return gen_ids
@@ -162,25 +172,25 @@ def generate_parameters(
             gen_ids.extend(quote_ids)
             prompt_ids.extend(quote_ids)
             value_ids = constraint_decoder(constraints["string_dfa"],
-                                           prompt_ids, model)
+                                           prompt_ids, model, vocab)
             gen_ids.extend(value_ids)
             prompt_ids.extend(value_ids)
 
         if value["type"] == "integer":
             value_ids = constraint_decoder(constraints["integer_dfa"],
-                                           prompt_ids, model)
+                                           prompt_ids, model, vocab)
             gen_ids.extend(value_ids[:-1])
             prompt_ids.extend(value_ids[:-1])
 
         if value["type"] == "number" or value["type"] == "float":
             value_ids = constraint_decoder(constraints["number_dfa"],
-                                           prompt_ids, model)
-            gen_ids.extend(value_ids)
-            prompt_ids.extend(value_ids)
+                                           prompt_ids, model, vocab)
+            gen_ids.extend(value_ids[:-1])
+            prompt_ids.extend(value_ids[:-1])
 
         if value["type"] == "boolean":
             value_ids = constraint_decoder(constraints["bool_trie"],
-                                           prompt_ids, model)
+                                           prompt_ids, model, vocab)
             gen_ids.extend(value_ids)
             prompt_ids.extend(value_ids)
 
@@ -197,8 +207,8 @@ def generate_function(
         prompt: str,
         valid_func_def: list[Any],
         model: Small_LLM_Model,
-        constraints: dict[str, Constraint]
-        ) -> dict[str, Any]:
+        constraints: dict[str, Constraint],
+        vocab: Vocab) -> dict[str, Any]:
     """Generate a valid function-call dictionary from a user prompt.
 
     Args:
@@ -207,6 +217,8 @@ def generate_function(
         model: The language model used for generation.
         constraints: Mapping of constraint names to
             automata used to guide valid token generation.
+        vocab: model's vocabulary, providing token id/string
+            lookups and decoding.
 
     Returns:
         Parsed function-call payload representing the output.
@@ -215,15 +227,13 @@ def generate_function(
         FunctionCallError: If the generated output cannot be decoded into valid
             JSON.
     """
-
     options: dict[str, str] = {}
     for func_def in valid_func_def:
         options[func_def.get("name")] = func_def.get("description")
 
     function_catalog: str = "\n".join(
-            [f"- {name}: {desc}"
-             for name, desc in options.items()]
-    )
+        [f"- {name}: {desc}"
+         for name, desc in options.items()])
 
     llm_prompt = (
         "Select the appropriate function from the available functions "
@@ -241,22 +251,22 @@ def generate_function(
     prompt_ids: list[int] = model.encode(llm_prompt).tolist()[0]
 
     name_ids = generate_function_name(prompt_ids, model,
-                                      constraints["name_trie"])
-    function_name: str = model.decode(name_ids[0])
+                                      constraints["name_trie"], vocab)
+    function_name = ""
+    for token_id in name_ids[0]:
+        function_name += vocab.decode(token_id)
     prompt_ids.extend(name_ids[1])
 
     for func_def in valid_func_def:
         if func_def.get("name") == function_name:
             parameters = func_def.get("parameters")
 
-    try:
-        param_ids = generate_parameters(parameters, prompt_ids, model,
-                                        constraints)
-    except RuntimeError as e:
-        print(f"Generation stopped safely: {e}")
-        param_ids = model.encode('", "parameters": null}').tolist()[0]
+    param_ids = generate_parameters(parameters, prompt_ids, model,
+                                    constraints, vocab)
 
-    output_str = model.decode(name_ids[1] + param_ids)
+    output_str = ""
+    for token_id in (name_ids[1] + param_ids):
+        output_str += vocab.decode(token_id)
     try:
         output_dict: dict[str, Any] = loads(output_str)
         return output_dict
