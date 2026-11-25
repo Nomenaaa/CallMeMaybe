@@ -154,9 +154,3 @@ Example generated result:
 ```
 
 This demonstrates the central behavior of the project: converting a prompt into a valid, typed function-call object using constrained decoding.
-
-# Bonus implementation
-
-For the bonus features:
-- Visualization
-- Support for `Qwen/Qwen2.5-1.5B-Instruct`
